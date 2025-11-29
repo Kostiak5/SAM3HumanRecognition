@@ -71,7 +71,7 @@ if __name__=="__main__":
     model = build_sam3_image_model()
     processor = Sam3Processor(model)
     # Load an image
-    IMG_FOLDER = "test"
+    IMG_FOLDER = "test/test_images"
     IMG_PATH = "0000646.jpg"
     IMG_OUT_FOLDER = "test/test_images_out"
     image = Image.open(os.path.join(IMG_FOLDER, IMG_PATH))
