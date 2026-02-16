@@ -151,7 +151,9 @@ def determine_folders(subset):
         set_folder = os.path.join(base,"CIHP/val2017")
         gt_folder = os.path.join(base,"CIHP/annotations/person_keypoints_val2017.json")
     
-    set_out_folder = os.path.join(base, "sam3_vis_text", f"vis_{subset}")
+    set_out_folder = os.path.join("../data", "SAM3_vis", "text_prompt", f"vis_{subset}")
+    if not os.path.exists(set_out_folder):
+        os.makedirs(set_out_folder)
     return set_folder, set_out_folder, gt_folder
 
 if __name__=="__main__":
