@@ -7,6 +7,7 @@ from PIL import Image
 from sam3.model_builder import build_sam3_image_model
 from sam3.model.sam3_image_processor import Sam3Processor
 import pycocotools.mask as mask_util
+from tqdm import tqdm
 
 def generate_colors(n=50, seed=42):
     """Generate n distinct RGB colors."""
@@ -117,7 +118,7 @@ def process_set(set_folder, set_out_folder=None, gt_folder=None):
     model = build_sam3_image_model()
     processor = Sam3Processor(model)
 
-    for img_path in os.listdir(set_folder):
+    for img_path in tqdm(os.listdir(set_folder)):
         _, output = process_img(processor, set_folder, img_path, set_out_folder)
         masks, boxes, scores = output
         if len(masks) == 0:
