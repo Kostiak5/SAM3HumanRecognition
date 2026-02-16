@@ -6,6 +6,7 @@ import numpy as np
 from PIL import Image
 from sam3.model_builder import build_sam3_image_model
 from sam3.model.sam3_image_processor import Sam3Processor
+import pycocotools.mask as mask_util
 
 def generate_colors(n=50, seed=42):
     """Generate n distinct RGB colors."""
@@ -14,6 +15,23 @@ def generate_colors(n=50, seed=42):
     return colors
 
 COLORS = generate_colors(50)  # Pre-generate 50 distinct colors
+
+def eval_set(eval_arr, gt_folder):
+    from xtcocotools.coco import COCO
+    from xtcocotools.cocoeval import COCOeval
+
+    cocoGt = COCO(gt_folder)
+    cocoDt = cocoGt.loadRes(eval_arr)
+
+    cocoEval = COCOeval(cocoGt, cocoDt, 'segm', sigmas=None, use_area=True)
+    # if save_data_dir[:4] == "COCO":
+    #     cocoEval.params.areaRng[0] = [1024, 1e10]
+
+    cocoEval.evaluate()
+    cocoEval.accumulate()
+    cocoEval.summarize()
+    print("evaluating, dumping ", cocoEval.stats[0].item())
+
 
 def visualize(image_path, boxes, scores, masks=None, score_threshold=0.3):
     """
@@ -66,16 +84,11 @@ def visualize(image_path, boxes, scores, masks=None, score_threshold=0.3):
 
     return img
 
-def process_img(text_prompt="human"):
-    model = build_sam3_image_model()
-    processor = Sam3Processor(model)
+def process_img(processor, img_folder, img_path, img_out_folder, text_prompt="human"):
     logs = []
     # Load an image
-    IMG_FOLDER = "t_test/test_images"
-    IMG_PATH = "0000646.jpg"
-    IMG_OUT_FOLDER = "t_test/test_images_out"
     logs.append("Start processing")
-    image = Image.open(os.path.join(IMG_FOLDER, IMG_PATH))
+    image = Image.open(os.path.join(img_folder, img_path))
     inference_state = processor.set_image(image)
     # Prompt the model with text
     logs.append("Image set")
@@ -85,17 +98,69 @@ def process_img(text_prompt="human"):
     # Get the masks, bounding boxes, and scores
     masks, boxes, scores = output["masks"], output["boxes"], output["scores"]
     logs.append([boxes, scores])
+    output = [masks, boxes, scores]
+
     image_out = visualize(
-            os.path.join(IMG_FOLDER, IMG_PATH),
+            os.path.join(img_folder, img_path),
             masks=masks,
             boxes=boxes,
             scores=scores
         )
 
-    cv2.imwrite(os.path.join(IMG_OUT_FOLDER, IMG_PATH), image_out)
-    logs.append(["Saved visualization: ", os.path.join(IMG_OUT_FOLDER, IMG_PATH)])
-    return logs
+    cv2.imwrite(os.path.join(img_out_folder, img_path), image_out)
+    logs.append(["Saved visualization: ", os.path.join(img_out_folder, img_path)])
+    return logs, output
+
+def process_set(set_folder, set_out_folder=None, gt_folder=None):
+    eval_arr = []
+
+    model = build_sam3_image_model()
+    processor = Sam3Processor(model)
+
+    for img_path in os.listdir(set_folder):
+        _, output = process_img(processor, set_folder, img_path, set_out_folder)
+        masks, boxes, scores = output
+        if len(masks) == 0:
+            continue
+        
+        
+        img_id = str(int(img_path[:-4]))
+        for mask, score in zip(masks, scores):
+            rle = mask_util.encode(np.asfortranarray(mask.astype(np.uint8)))
+            rle['counts'] = rle['counts'].decode('utf-8')
+            eval_arr.append({
+                "segmentation": rle,
+                "score": float(score),
+                "image_id": img_id,
+                "category_id": 1
+            })
+    
+    eval_set(eval_arr, gt_folder)
+
+    
+
+def determine_folders(subset):
+    base = "../sam2.1/sam2"
+    if subset == "COCO":
+        set_folder = os.path.join(base,"COCO/original/val2017")
+        gt_folder = os.path.join(base,"COCO/original/annotations/person_keypoints_val2017.json")
+    elif subset == "OCHUMAN":
+        set_folder = os.path.join(base,"OCHuman/COCO-like/val2017")
+        gt_folder = os.path.join(base,"OCHuman/COCO-like/annotations/ochuman_coco_onlytest.json")
+    elif subset == "CIHP":
+        set_folder = os.path.join(base,"CIHP/val2017")
+        gt_folder = os.path.join(base,"CIHP/annotations/person_keypoints_val2017.json")
+    
+    set_out_folder = os.path.join(base, "sam3_vis_text", f"vis_{subset}")
+    return set_folder, set_out_folder, gt_folder
 
 if __name__=="__main__":
-    logs = process_img()
-    print(logs)
+    IMG_FOLDER = "t_test/test_images"
+    IMG_PATH = "0000646.jpg"
+    IMG_OUT_FOLDER = "t_test/test_images_out"
+
+    SUBSET = "COCO"
+
+    SET_FOLDER, SET_OUT_FOLDER, GT_FOLDER = determine_folders(SUBSET)
+
+    process_set(SET_FOLDER, SET_OUT_FOLDER, GT_FOLDER)
