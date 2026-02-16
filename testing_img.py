@@ -67,7 +67,7 @@ def visualize(image_path, boxes, scores, masks=None, score_threshold=0.3):
 
     return img
 
-if __name__=="__main__":
+def process_img(text_prompt="human"):
     model = build_sam3_image_model()
     processor = Sam3Processor(model)
     # Load an image
@@ -77,7 +77,7 @@ if __name__=="__main__":
     image = Image.open(os.path.join(IMG_FOLDER, IMG_PATH))
     inference_state = processor.set_image(image)
     # Prompt the model with text
-    output = processor.set_text_prompt(state=inference_state, prompt="human")
+    output = processor.set_text_prompt(state=inference_state, prompt=text_prompt)
 
     # Get the masks, bounding boxes, and scores
     masks, boxes, scores = output["masks"], output["boxes"], output["scores"]
@@ -91,3 +91,6 @@ if __name__=="__main__":
 
     cv2.imwrite(os.path.join(IMG_OUT_FOLDER, IMG_PATH), image_out)
     print("Saved visualization: ", os.path.join(IMG_OUT_FOLDER, IMG_PATH))
+
+if __name__=="__main__":
+    process_img()    

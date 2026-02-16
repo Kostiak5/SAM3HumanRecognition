@@ -15,9 +15,20 @@ from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Union
 import torch
 import torch.utils.data
 import torchvision
-from decord import cpu, VideoReader
-from iopath.common.file_io import g_pathmgr
+import torch
+import torch.utils.data
+import torchvision
 
+# Conditional import for decord (not available on macOS)
+try:
+    from decord import cpu, VideoReader
+    HAS_DECORD = True
+except (ImportError, ModuleNotFoundError):
+    HAS_DECORD = False
+    VideoReader = None
+    cpu = None
+
+from iopath.common.file_io import g_pathmgr
 from PIL import Image as PILImage
 from PIL.Image import DecompressionBombError
 

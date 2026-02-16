@@ -15,7 +15,6 @@ def generate_colors(n=50, seed=42):
 
 COLORS = generate_colors(50)  # Pre-generate 50 distinct colors
 
-
 def visualize(image_path, boxes, scores, masks=None, score_threshold=0.3):
     """
     image_path: path to a JPG image
@@ -67,21 +66,25 @@ def visualize(image_path, boxes, scores, masks=None, score_threshold=0.3):
 
     return img
 
-if __name__=="__main__":
+def process_img(text_prompt="human"):
     model = build_sam3_image_model()
     processor = Sam3Processor(model)
+    logs = []
     # Load an image
     IMG_FOLDER = "t_test/test_images"
     IMG_PATH = "0000646.jpg"
     IMG_OUT_FOLDER = "t_test/test_images_out"
+    logs.append("Start processing")
     image = Image.open(os.path.join(IMG_FOLDER, IMG_PATH))
     inference_state = processor.set_image(image)
     # Prompt the model with text
-    output = processor.set_text_prompt(state=inference_state, prompt="human")
+    logs.append("Image set")
+
+    output = processor.set_text_prompt(state=inference_state, prompt=text_prompt)
 
     # Get the masks, bounding boxes, and scores
     masks, boxes, scores = output["masks"], output["boxes"], output["scores"]
-    print(boxes, scores)
+    logs.append([boxes, scores])
     image_out = visualize(
             os.path.join(IMG_FOLDER, IMG_PATH),
             masks=masks,
@@ -90,4 +93,9 @@ if __name__=="__main__":
         )
 
     cv2.imwrite(os.path.join(IMG_OUT_FOLDER, IMG_PATH), image_out)
-    print("Saved visualization: ", os.path.join(IMG_OUT_FOLDER, IMG_PATH))
+    logs.append(["Saved visualization: ", os.path.join(IMG_OUT_FOLDER, IMG_PATH)])
+    return logs
+
+if __name__=="__main__":
+    logs = process_img()
+    print(logs)
