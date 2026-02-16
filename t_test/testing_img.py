@@ -126,7 +126,7 @@ def process_set(set_folder, set_out_folder=None, gt_folder=None):
         
         img_id = str(int(img_path[:-4]))
         for mask, score in zip(masks, scores):
-            rle = mask_util.encode(np.asfortranarray(mask.astype(np.uint8)))
+            rle = mask_util.encode(np.asfortranarray(mask.detach().cpu().numpy().astype(np.uint8)))
             rle['counts'] = rle['counts'].decode('utf-8')
             eval_arr.append({
                 "segmentation": rle,
