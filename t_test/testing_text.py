@@ -2,7 +2,7 @@ import torch
 import os
 import cv2
 import numpy as np
-#################################### For Image ####################################
+import json
 from PIL import Image
 from sam3.model_builder import build_sam3_image_model
 from sam3.model.sam3_image_processor import Sam3Processor
@@ -107,32 +107,53 @@ def process_img(processor, img_folder, img_path, img_out_folder, text_prompt="hu
             boxes=boxes,
             scores=scores
         )
-
     cv2.imwrite(os.path.join(img_out_folder, img_path), image_out)
     logs.append(["Saved visualization: ", os.path.join(img_out_folder, img_path)])
     return logs, output
 
-def process_set(set_folder, set_out_folder=None, gt_folder=None):
+def process_set(set_folder, set_out_folder=None, gt_folder=None, filename_to_id=None):
     eval_arr = []
 
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    print(f"Loading model on: {device.type.upper()}")
+
     model = build_sam3_image_model()
+    model.to(device) 
+
     processor = Sam3Processor(model)
 
+    i = 0
     for img_path in tqdm(os.listdir(set_folder)):
+        i += 1
+        if i == 100:
+            break
+
+        if img_path[-3:] != "jpg":
+            continue
+
         _, output = process_img(processor, set_folder, img_path, set_out_folder)
         masks, boxes, scores = output
+        print(img_path, len(masks))
         if len(masks) == 0:
             continue
         
-        
-        img_id = str(int(img_path[:-4]))
+        if filename_to_id is None:
+            img_id = str(int(img_path[:-4]))
+        else:
+            img_id = filename_to_id[img_path]
+
         for mask, score in zip(masks, scores):
-            rle = mask_util.encode(np.asfortranarray(mask.detach().cpu().numpy().astype(np.uint8)))
+            mask_np = mask.detach().cpu().numpy().astype(np.uint8)
+            if mask_np.ndim == 3:
+                mask_np = mask_np[0] # Take the first (and only) channel
+            
+            # 2. Encode with the correct 2D shape
+            rle = mask_util.encode(np.asfortranarray(mask_np))
             rle['counts'] = rle['counts'].decode('utf-8')
             eval_arr.append({
                 "segmentation": rle,
                 "score": float(score),
-                "image_id": img_id,
+                "image_id": int(img_id),
                 "category_id": 1
             })
     
@@ -151,19 +172,29 @@ def determine_folders(subset):
     elif subset == "CIHP":
         set_folder = os.path.join(base,"CIHP/val2017")
         gt_folder = os.path.join(base,"CIHP/annotations/person_keypoints_val2017.json")
+
     
     set_out_folder = os.path.join("../data", "SAM3_vis", "text_prompt", f"vis_{subset}")
     if not os.path.exists(set_out_folder):
         os.makedirs(set_out_folder)
     return set_folder, set_out_folder, gt_folder
 
+def load_ids(gt_folder):
+    with open(gt_folder, 'r') as f:
+        data = json.load(f)
+        filename_to_id = {img['file_name']: img['id'] for img in data['images']}
+    
+    return filename_to_id
+
+
 if __name__=="__main__":
     IMG_FOLDER = "t_test/test_images"
     IMG_PATH = "0000646.jpg"
     IMG_OUT_FOLDER = "t_test/test_images_out"
 
-    SUBSET = "COCO"
+    SUBSET = "CIHP"
 
     SET_FOLDER, SET_OUT_FOLDER, GT_FOLDER = determine_folders(SUBSET)
+    filename_to_id = load_ids(GT_FOLDER)
 
-    process_set(SET_FOLDER, SET_OUT_FOLDER, GT_FOLDER)
+    process_set(SET_FOLDER, SET_OUT_FOLDER, GT_FOLDER, filename_to_id)
