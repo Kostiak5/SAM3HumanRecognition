@@ -201,59 +201,7 @@ def process_img(device, model, processor, img_folder, img_path, img_out_folder, 
         all_point_visibility.append(point_visibility_sorted[:n_kpts])
     return logs, np.array(all_point_coords), np.array(all_point_visibility)
 
-def process_set(set_folder, set_out_folder=None, gt_folder=None, filename_to_id=None, id_to_kpts=None, args=None):
-    eval_arr = []
-
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    print(f"Loading model on: {device.type.upper()}")
-    
-    model = build_sam3_image_model(enable_inst_interactivity=True)
-    model.to(device) 
-
-    processor = Sam3Processor(model)
-
-    i = 0
-    all_images = []
-    all_image_ids = []
-    all_point_coords = []
-    all_point_visibility = []
-    all_image_paths = []
-    for img_path in tqdm(os.listdir(set_folder)):
-        i += 1
-        if i == 3:
-            break
-
-        if img_path[-3:] != "jpg":
-            continue
-
-        if filename_to_id is None:
-            img_id = str(int(img_path[:-4]))
-        else:
-            img_id = filename_to_id[img_path]
-
-        image = Image.open(os.path.join(set_folder, img_path))
-        all_images.append(image)
-        all_image_paths.append(img_path)
-        all_image_ids.append(img_id)
-        _, point_coords, point_visibility = process_img(device, model, processor, set_folder, img_path, set_out_folder, id_to_kpts[img_id], args)
-        all_point_coords.append(point_coords)
-        all_point_visibility.append(np.ones_like(point_visibility))
-
-    inference_state = processor.set_image_batch(all_images)
-    # inference_state = processor.set_text_prompt(state=inference_state, prompt="human")  
-    # masks_batch, scores_batch, _ = model.predict_inst_batch(
-    #     inference_state,
-    #     point_coords=all_point_coords,
-    #     point_labels=all_point_visibility,
-    #     multimask_output=False 
-    # )
-    print(all_point_coords, all_point_visibility)
-    masks_batch, scores_batch, _ = model.predict_inst_batch(
-        inference_state,
-        point_coords_batch=all_point_coords,
-        point_labels_batch=all_point_visibility,
-        multimask_output=False 
-    )
+def process_batch(masks_batch, scores_batch, all_point_coords, all_image_ids, all_image_paths, set_folder, set_out_folder, eval_arr):
     for masks, scores, point_coords, img_id, img_path in tqdm(zip(masks_batch, scores_batch, all_point_coords, all_image_ids, all_image_paths)):
         for mask, score in zip(masks, scores):
             mask_np = (mask[0] > 0.5).astype(np.uint8)
@@ -276,6 +224,60 @@ def process_set(set_folder, set_out_folder=None, gt_folder=None, filename_to_id=
                 points=point_coords
             )
         cv2.imwrite(os.path.join(set_out_folder, img_path), image_out)
+    
+
+def process_set(set_folder, set_out_folder=None, gt_folder=None, filename_to_id=None, id_to_kpts=None, args=None):
+    eval_arr = []
+
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    print(f"Loading model on: {device.type.upper()}")
+    
+    model = build_sam3_image_model(enable_inst_interactivity=True)
+    model.to(device) 
+
+    processor = Sam3Processor(model)
+
+    i = 0
+    all_images = []
+    all_image_ids = []
+    all_point_coords = []
+    all_point_visibility = []
+    all_image_paths = []
+    for img_path in tqdm(os.listdir(set_folder)):        
+        i += 1
+        
+        if img_path[-3:] != "jpg":
+            continue
+
+        if filename_to_id is None:
+            img_id = str(int(img_path[:-4]))
+        else:
+            img_id = filename_to_id[img_path]
+
+        image = Image.open(os.path.join(set_folder, img_path))
+        all_images.append(image)
+        all_image_paths.append(img_path)
+        all_image_ids.append(img_id)
+        _, point_coords, point_visibility = process_img(device, model, processor, set_folder, img_path, set_out_folder, id_to_kpts[img_id], args)
+        all_point_coords.append(point_coords)
+        all_point_visibility.append(np.ones_like(point_visibility))
+        if i == 3:
+            inference_state = processor.set_image_batch(all_images)
+            # inference_state = processor.set_text_prompt(state=inference_state, prompt="human")  
+            masks_batch, scores_batch, _ = model.predict_inst_batch(
+                inference_state,
+                point_coords_batch=all_point_coords,
+                point_labels_batch=all_point_visibility,
+                multimask_output=False 
+            )
+            process_batch(masks_batch, scores_batch, all_point_coords, all_image_ids, all_image_paths, set_folder, set_out_folder, eval_arr)
+            all_images = []
+            all_image_ids = []
+            all_point_coords = []
+            all_point_visibility = []
+            all_image_paths = []
+            i = 0
+    
     
     eval_set(eval_arr, gt_folder)
 
