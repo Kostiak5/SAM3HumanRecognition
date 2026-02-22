@@ -220,7 +220,7 @@ def process_set(set_folder, set_out_folder=None, gt_folder=None, filename_to_id=
     all_image_paths = []
     for img_path in tqdm(os.listdir(set_folder)):
         i += 1
-        if i == 4:
+        if i == 3:
             break
 
         if img_path[-3:] != "jpg":
