@@ -234,9 +234,11 @@ def process_set(set_folder, set_out_folder=None, gt_folder=None, filename_to_id=
     print(f"Loading model on: {device.type.upper()}")
     
     model = build_sam3_image_model(enable_inst_interactivity=True)
+    print(f"Model loaded on: {device.type.upper()}")
     model.to(device) 
 
     processor = Sam3Processor(model)
+    print(f"Processor loaded")
 
     i = 0
     all_images = []
