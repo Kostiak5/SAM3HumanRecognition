@@ -255,7 +255,6 @@ def process_set(set_folder, set_out_folder=None, gt_folder=None, filename_to_id=
             img_id = str(int(img_path[:-4]))
         else:
             img_id = filename_to_id[img_path]
-        print(f"Processing img {i}")
         image = Image.open(os.path.join(set_folder, img_path))
         all_images.append(image)
         all_image_paths.append(img_path)
@@ -263,16 +262,17 @@ def process_set(set_folder, set_out_folder=None, gt_folder=None, filename_to_id=
         _, point_coords, point_visibility = process_img(device, model, processor, set_folder, img_path, set_out_folder, id_to_kpts[img_id], args)
         all_point_coords.append(point_coords)
         all_point_visibility.append(np.ones_like(point_visibility))
-        if i == 3:
-            inference_state = processor.set_image_batch(all_images)
-            # inference_state = processor.set_text_prompt(state=inference_state, prompt="human")  
-            masks_batch, scores_batch, _ = model.predict_inst_batch(
-                inference_state,
-                point_coords_batch=all_point_coords,
-                point_labels_batch=all_point_visibility,
-                multimask_output=False 
-            )
-            process_batch(masks_batch, scores_batch, all_point_coords, all_image_ids, all_image_paths, set_folder, set_out_folder, eval_arr, args)
+        if i == 10:
+            if point_coords is not None and point_coords.shape[0] > 0 and point_coords.shape[1] > 0:
+                inference_state = processor.set_image_batch(all_images)
+                # inference_state = processor.set_text_prompt(state=inference_state, prompt="human")  
+                masks_batch, scores_batch, _ = model.predict_inst_batch(
+                    inference_state,
+                    point_coords_batch=all_point_coords,
+                    point_labels_batch=all_point_visibility,
+                    multimask_output=False 
+                )
+                process_batch(masks_batch, scores_batch, all_point_coords, all_image_ids, all_image_paths, set_folder, set_out_folder, eval_arr, args)
             all_images = []
             all_image_ids = []
             all_point_coords = []
