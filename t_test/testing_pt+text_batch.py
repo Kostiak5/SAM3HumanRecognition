@@ -255,7 +255,7 @@ def process_set(set_folder, set_out_folder=None, gt_folder=None, filename_to_id=
             img_id = str(int(img_path[:-4]))
         else:
             img_id = filename_to_id[img_path]
-
+        print(f"Processing img {i}")
         image = Image.open(os.path.join(set_folder, img_path))
         all_images.append(image)
         all_image_paths.append(img_path)
