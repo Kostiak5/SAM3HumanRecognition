@@ -209,14 +209,17 @@ def process_batch(masks_batch, scores_batch, all_point_coords, all_image_ids, al
             # if mask_np.ndim == 3:
             #     mask_np = mask_np[0] # Take the first (and only) channel
             # 2. Encode with the correct 2D shape
+
             rle = mask_util.encode(np.asfortranarray(mask_np))
-            rle['counts'] = rle['counts'].decode('utf-8')
-            eval_arr.append({
-                "segmentation": rle,
-                "score": float(score),
-                "image_id": int(img_id),
-                "category_id": 1
-            })
+            if rle is not None:
+                if isinstance(rle['counts'], bytes):
+                    rle['counts'] = rle['counts'].decode('utf-8')
+                    eval_arr.append({
+                        "segmentation": rle,
+                        "score": float(score),
+                        "image_id": int(img_id),
+                        "category_id": 1
+                    })
         if args.vis:
             image_out = visualize(
                     os.path.join(set_folder, img_path),
