@@ -248,8 +248,6 @@ def process_set(set_folder, set_out_folder=None, gt_folder=None, filename_to_id=
     all_image_paths = []
     for img_path in tqdm(os.listdir(set_folder)):        
         i += 1
-        if i == 3:
-            break
         if img_path[-3:] != "jpg":
             continue
 
@@ -288,12 +286,22 @@ def process_set(set_folder, set_out_folder=None, gt_folder=None, filename_to_id=
     
 
 def determine_folders(args):
-    base = "../sam2.1/sam2"
+    if args.dataset[-6:] == "server":
+        base = "../../../data"
+    else:
+        base = "../sam2.1/sam2"
+    if args.dataset[-6:] == "server":
+        base_out = "../../../data"
+    else:
+        base_out = "../data"
+
+    args.dataset = args.dataset[:-6]
+
     base_serv = "../../../data"
     if args.dataset == "COCO":
         set_folder = os.path.join(base,"COCO/original/val2017")
         gt_folder = os.path.join(base,"COCO/original/annotations/person_keypoints_val2017.json")
-        kpts_folder = os.path.join(base,"COCO/original/annotations/person_keypoints_val2017.json")
+        kpts_folder = os.path.join(base,"COCO/original/annotations/PMPose_COCO_val2017_full_keypoints.json")
 
     elif args.dataset == "OCHUMAN":
         set_folder = os.path.join(base,"OCHuman/COCO-like/val2017")
@@ -305,16 +313,6 @@ def determine_folders(args):
         gt_folder = os.path.join(base,"CIHP/annotations/person_keypoints_val2017.json")
         kpts_folder = os.path.join(base,"CIHP/annotations/PMPose-b_GTmasks_CIHP_val.json")
 
-    elif args.dataset == "COCO-server":
-        set_folder = os.path.join(base_serv,"COCO/original/val2017")
-        gt_folder = os.path.join(base_serv,"COCO/original/annotations/person_keypoints_val2017.json")
-        kpts_folder = os.path.join(base_serv,"COCO/original/annotations/PMPose_COCO_val2017_full_keypoints.json")
-
-
-    if args.dataset[-6:] == "server":
-        base_out = "../../../data"
-    else:
-        base_out = "../data"
     set_out_folder = os.path.join(base_out, "SAM3_vis", "pt+text_prompt", f"vis_{args.dataset}")
 
     if not os.path.exists(set_out_folder):
