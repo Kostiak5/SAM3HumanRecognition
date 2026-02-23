@@ -93,9 +93,6 @@ def process_set(set_folder, set_out_folder=None, gt_folder=None, filename_to_id=
         # print(img_path, len(masks))
         if len(masks) == 0:
             continue
-        elif len(masks.shape) == 1:
-            masks = masks[None, 0]
-            scores = scores[None, 0]
         
 
         for mask, score in zip(masks, scores):
