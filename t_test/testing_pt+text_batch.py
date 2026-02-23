@@ -259,7 +259,7 @@ def process_set(set_folder, set_out_folder=None, gt_folder=None, filename_to_id=
         else:
             img_id = filename_to_id[img_path]
         with Image.open(os.path.join(set_folder, img_path)) as image:
-            all_images.append(image)
+            all_images.append(image.convert("RGB"))
         all_image_paths.append(img_path)
         all_image_ids.append(img_id)
         _, point_coords, point_visibility = process_img(device, model, processor, set_folder, img_path, set_out_folder, id_to_kpts[img_id], args)
