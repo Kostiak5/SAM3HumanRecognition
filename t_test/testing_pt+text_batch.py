@@ -202,7 +202,7 @@ def process_img(device, model, processor, img_folder, img_path, img_out_folder, 
         all_point_visibility.append(point_visibility_sorted[:n_kpts])
     return logs, np.array(all_point_coords), np.array(all_point_visibility)
 
-def process_batch(masks_batch, scores_batch, all_point_coords, all_image_ids, all_image_paths, set_folder, set_out_folder, eval_arr):
+def process_batch(masks_batch, scores_batch, all_point_coords, all_image_ids, all_image_paths, set_folder, set_out_folder, eval_arr, args):
     for masks, scores, point_coords, img_id, img_path in tqdm(zip(masks_batch, scores_batch, all_point_coords, all_image_ids, all_image_paths)):
         for mask, score in zip(masks, scores):
             mask_np = (mask[0] > 0.5).astype(np.uint8)
@@ -263,7 +263,7 @@ def process_set(set_folder, set_out_folder=None, gt_folder=None, filename_to_id=
         if point_coords is not None and point_coords.shape[0] > 0:
             all_point_coords.append(point_coords)
             all_point_visibility.append(np.ones_like(point_visibility))
-        if i == 10:
+        if i == 1:
             if point_coords is not None and len(all_point_coords) > 0:
                 inference_state = processor.set_image_batch(all_images)
                 # inference_state = processor.set_text_prompt(state=inference_state, prompt="human") 
