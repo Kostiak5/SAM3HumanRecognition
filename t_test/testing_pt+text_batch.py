@@ -266,7 +266,8 @@ def process_set(set_folder, set_out_folder=None, gt_folder=None, filename_to_id=
         if i == 10:
             if point_coords is not None and len(all_point_coords) > 0:
                 inference_state = processor.set_image_batch(all_images)
-                # inference_state = processor.set_text_prompt(state=inference_state, prompt="human")  
+                # inference_state = processor.set_text_prompt(state=inference_state, prompt="human") 
+                print(all_point_coords, all_point_visibility) 
                 masks_batch, scores_batch, _ = model.predict_inst_batch(
                     inference_state,
                     point_coords_batch=all_point_coords,
