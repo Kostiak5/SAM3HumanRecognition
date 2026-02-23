@@ -107,7 +107,7 @@ def process_set(set_folder, set_out_folder=None, gt_folder=None, filename_to_id=
         if point_coords is not None and point_coords.shape[0] > 0:
             all_point_coords.append(point_coords)
             all_point_visibility.append(np.ones_like(point_visibility))
-        if i == 1:
+        if i >= 1:
             if point_coords is not None and len(all_point_coords) > 0:
                 inference_state = processor.set_image_batch(all_images)
                 # inference_state = processor.set_text_prompt(state=inference_state, prompt="human") 
