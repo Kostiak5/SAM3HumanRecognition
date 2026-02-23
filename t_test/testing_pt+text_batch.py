@@ -16,6 +16,7 @@ def parse_args():
     parser = argparse.ArgumentParser(description="SAM 3 Human Recognition and Visualization")
 
     parser.add_argument('--vis', action="store_true")
+    parser.add_argument('--dataset', type=str, default="CIHP")
 
     return parser.parse_args()
 
@@ -216,14 +217,14 @@ def process_batch(masks_batch, scores_batch, all_point_coords, all_image_ids, al
                 "image_id": int(img_id),
                 "category_id": 1
             })
-            
-        image_out = visualize(
-                os.path.join(set_folder, img_path),
-                masks=masks,
-                scores=scores,
-                points=point_coords
-            )
-        cv2.imwrite(os.path.join(set_out_folder, img_path), image_out)
+        if args.vis:
+            image_out = visualize(
+                    os.path.join(set_folder, img_path),
+                    masks=masks,
+                    scores=scores,
+                    points=point_coords
+                )
+            cv2.imwrite(os.path.join(set_out_folder, img_path), image_out)
     
 
 def process_set(set_folder, set_out_folder=None, gt_folder=None, filename_to_id=None, id_to_kpts=None, args=None):
@@ -270,7 +271,7 @@ def process_set(set_folder, set_out_folder=None, gt_folder=None, filename_to_id=
                 point_labels_batch=all_point_visibility,
                 multimask_output=False 
             )
-            process_batch(masks_batch, scores_batch, all_point_coords, all_image_ids, all_image_paths, set_folder, set_out_folder, eval_arr)
+            process_batch(masks_batch, scores_batch, all_point_coords, all_image_ids, all_image_paths, set_folder, set_out_folder, eval_arr, args)
             all_images = []
             all_image_ids = []
             all_point_coords = []
@@ -283,25 +284,36 @@ def process_set(set_folder, set_out_folder=None, gt_folder=None, filename_to_id=
 
     
 
-def determine_folders(subset):
+def determine_folders(args):
     base = "../sam2.1/sam2"
-    if subset == "COCO":
+    base_serv = "../../data"
+    if args.dataset == "COCO":
         set_folder = os.path.join(base,"COCO/original/val2017")
         gt_folder = os.path.join(base,"COCO/original/annotations/person_keypoints_val2017.json")
         kpts_folder = os.path.join(base,"COCO/original/annotations/person_keypoints_val2017.json")
 
-    elif subset == "OCHUMAN":
+    elif args.dataset == "OCHUMAN":
         set_folder = os.path.join(base,"OCHuman/COCO-like/val2017")
         gt_folder = os.path.join(base,"OCHuman/COCO-like/annotations/ochuman_coco_onlytest.json")
         kpts_folder = os.path.join(base,"COCO/original/annotations/person_keypoints_val2017.json")
 
-    elif subset == "CIHP":
+    elif args.dataset == "CIHP":
         set_folder = os.path.join(base,"CIHP/val2017")
         gt_folder = os.path.join(base,"CIHP/annotations/person_keypoints_val2017.json")
         kpts_folder = os.path.join(base,"CIHP/annotations/PMPose-b_GTmasks_CIHP_val.json")
 
-    
-    set_out_folder = os.path.join("../data", "SAM3_vis", "pt+text_prompt", f"vis_{subset}")
+    elif args.dataset == "COCO-server":
+        set_folder = os.path.join(base_serv,"COCO/original/val2017")
+        gt_folder = os.path.join(base_serv,"COCO/original/annotations/person_keypoints_val2017.json")
+        kpts_folder = os.path.join(base_serv,"COCO/original/annotations/PMPose_COCO_val2017_full_keypoints.json")
+
+
+    if args.dataset[-6:] != "server":
+        base_out = "../../data"
+    else:
+        base_out = "../data"
+    set_out_folder = os.path.join(base_out, "SAM3_vis", "pt+text_prompt", f"vis_{args.dataset}")
+
     if not os.path.exists(set_out_folder):
         os.makedirs(set_out_folder)
     return set_folder, set_out_folder, gt_folder, kpts_folder
@@ -326,13 +338,8 @@ def load_pts(gt_folder, id_to_kpts):
     return id_to_kpts
 
 if __name__=="__main__":
-    IMG_FOLDER = "t_test/test_images"
-    IMG_PATH = "0000646.jpg"
-    IMG_OUT_FOLDER = "t_test/test_images_out"
-
-    SUBSET = "CIHP"
     args = parse_args()
-    SET_FOLDER, SET_OUT_FOLDER, GT_FOLDER, KPTS_FOLDER = determine_folders(SUBSET)
+    SET_FOLDER, SET_OUT_FOLDER, GT_FOLDER, KPTS_FOLDER = determine_folders(args)
     filename_to_id, id_to_kpts = load_ids(KPTS_FOLDER)
     id_to_kpts = load_pts(KPTS_FOLDER, id_to_kpts)
 
