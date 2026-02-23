@@ -286,7 +286,7 @@ def process_set(set_folder, set_out_folder=None, gt_folder=None, filename_to_id=
 
 def determine_folders(args):
     base = "../sam2.1/sam2"
-    base_serv = "../../data"
+    base_serv = "../../../data"
     if args.dataset == "COCO":
         set_folder = os.path.join(base,"COCO/original/val2017")
         gt_folder = os.path.join(base,"COCO/original/annotations/person_keypoints_val2017.json")
@@ -308,8 +308,8 @@ def determine_folders(args):
         kpts_folder = os.path.join(base_serv,"COCO/original/annotations/PMPose_COCO_val2017_full_keypoints.json")
 
 
-    if args.dataset[-6:] != "server":
-        base_out = "../../data"
+    if args.dataset[-6:] == "server":
+        base_out = "../../../data"
     else:
         base_out = "../data"
     set_out_folder = os.path.join(base_out, "SAM3_vis", "pt+text_prompt", f"vis_{args.dataset}")
