@@ -263,6 +263,7 @@ def process_set(set_folder, set_out_folder=None, gt_folder=None, filename_to_id=
         all_image_paths.append(img_path)
         all_image_ids.append(img_id)
         _, point_coords, point_visibility = process_img(device, model, processor, set_folder, img_path, set_out_folder, id_to_kpts[img_id], args)
+        print(point_coords, point_visibility)
         if point_coords is not None and point_coords.shape[0] > 0:
             all_point_coords.append(point_coords)
             all_point_visibility.append(np.ones_like(point_visibility))
@@ -270,7 +271,6 @@ def process_set(set_folder, set_out_folder=None, gt_folder=None, filename_to_id=
             if point_coords is not None and len(all_point_coords) > 0:
                 inference_state = processor.set_image_batch(all_images)
                 # inference_state = processor.set_text_prompt(state=inference_state, prompt="human") 
-                print(all_point_coords, all_point_visibility) 
                 masks_batch, scores_batch, _ = model.predict_inst_batch(
                     inference_state,
                     point_coords_batch=all_point_coords,
