@@ -96,7 +96,7 @@ def process_set(set_folder, set_out_folder=None, gt_folder=None, filename_to_id=
         
 
         for mask, score in zip(masks, scores):
-            mask_np = mask.detach().cpu().numpy().astype(np.uint8)
+            mask_np = mask.astype(np.uint8)
             if mask_np.ndim == 3:
                 mask_np = mask_np[0] # Take the first (and only) channel
             
