@@ -57,7 +57,7 @@ def determine_folders(args):
     elif args.dataset == "OCHUMAN":
         set_folder = os.path.join(base,"OCHuman/COCO-like/val2017")
         gt_folder = os.path.join(base,"OCHuman/COCO-like/annotations/ochuman_coco_onlytest.json")
-        kpts_folder = os.path.join(base,"COCO/original/annotations/person_keypoints_val2017.json")
+        kpts_folder = os.path.join(base,"OCHuman/COCO-like/annotations/PMPose-b_OCH_test_pGT.json")
 
     elif args.dataset == "CIHP":
         set_folder = os.path.join(base,"CIHP/val2017")
