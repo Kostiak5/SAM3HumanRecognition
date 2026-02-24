@@ -86,7 +86,10 @@ def process_set(set_folder, set_out_folder=None, gt_folder=None, filename_to_id=
         if filename_to_id is None:
             img_id = str(int(img_path[:-4]))
         else:
-            img_id = filename_to_id[img_path]
+            if img_path in filename_to_id:
+                img_id = filename_to_id[img_path]
+            else:
+                continue
 
         _, output = process_img(device, model, processor, set_folder, img_path, set_out_folder, id_to_kpts[img_id], args)
         masks, scores = output
