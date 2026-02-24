@@ -25,7 +25,7 @@ def process_img(device, model, processor, img_folder, img_path, img_out_folder, 
     # Prompt the model with text
     logs.append("Image set")
 
-    n_kpts = 6
+    n_kpts = args.n_kpts
     masks = []
     scores = []
     all_point_coords = []

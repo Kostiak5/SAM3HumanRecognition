@@ -10,6 +10,7 @@ def parse_args():
 
     parser.add_argument('--vis', action="store_true")
     parser.add_argument('--dataset', type=str, default="CIHP")
+    parser.add_argument('--n_kpts', type=int, default=6)
 
     return parser.parse_args()
 
