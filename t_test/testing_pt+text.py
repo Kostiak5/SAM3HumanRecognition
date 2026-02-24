@@ -91,7 +91,7 @@ def process_set(set_folder, set_out_folder=None, gt_folder=None, filename_to_id=
             else:
                 continue
 
-        _, output = process_img(device, model, processor, set_folder, img_path, set_out_folder, id_to_kpts[img_id], args)
+        _, output = process_img(device, model, processor, set_folder, img_path, set_out_folder, id_to_kpts[img_id], args=args)
         masks, scores = output
         # print(img_path, len(masks))
         if len(masks) == 0:
