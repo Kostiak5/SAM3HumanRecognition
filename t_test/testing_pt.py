@@ -21,9 +21,7 @@ def process_img(device, model, processor, img_folder, img_path, img_out_folder, 
     logs.append("Start processing")
     image = Image.open(os.path.join(img_folder, img_path))
     inference_state = processor.set_image(image)
-    inference_state = processor.set_text_prompt(state=inference_state, prompt=text_prompt)
-    outp = output["masks"][0]
-    print(outp)
+    # inference_state = processor.set_text_prompt(state=inference_state, prompt="potato")
     # Prompt the model with text
     logs.append("Image set")
 
