@@ -8,22 +8,21 @@ from sam3.model_builder import build_sam3_image_model
 from sam3.model.sam3_image_processor import Sam3Processor
 import pycocotools.mask as mask_util
 from tqdm import tqdm
-from t_test.testing_utils import determine_folders, parse_args, generate_colors, eval_set, visualize, select_keypoints, load_pts, load_ids
+from t_test.testing_utils import determine_folders, parse_args, generate_colors, eval_set, visualize, select_keypoints, load_pts, load_ids, load_pts_bboxes, compress_logits
 
 import argparse
 import os
 COLORS = generate_colors(50)
 
-def process_img(device, model, processor, img_folder, img_path, img_out_folder, pose_kpts_arr, text_prompt="human", args=None):
+def process_img(device, model, processor, img_folder, img_path, img_out_folder, pose_kpts_arr, bbox_arr, text_prompt="human", args=None):
     logs = []
 
     # Load an image
     logs.append("Start processing")
     image = Image.open(os.path.join(img_folder, img_path))
+    imgw, imgh = image.size
     inference_state = processor.set_image(image)
     inference_state = processor.set_text_prompt(state=inference_state, prompt=text_prompt)
-    outp = output["masks"][0]
-    print(outp)
     # Prompt the model with text
     logs.append("Image set")
 
@@ -31,19 +30,35 @@ def process_img(device, model, processor, img_folder, img_path, img_out_folder, 
     masks = []
     scores = []
     all_point_coords = []
-    for pose_kpts in pose_kpts_arr:
+    for pose_kpts, bbox in zip(pose_kpts_arr, bbox_arr):
     # print(pose_kpts[:, :2][:n_kpts], pose_kpts[:, 2][:n_kpts])
         point_coords = pose_kpts[:, :2]
         point_visibility = pose_kpts[:, 2]
         point_coords_sorted, point_visibility_sorted, _ = select_keypoints(0.5, point_coords, point_visibility, method="distance+confidence")
         if point_visibility_sorted is None:
             continue
+
+        if 'masks' in inference_state and inference_state['masks'].shape[0]:
+            norm_box_cxcywh = np.array([(bbox[0] + bbox[2]) / 2 / imgw, (bbox[1] + bbox[3]) / 2 / imgh, bbox[2] / imgw, bbox[3] / imgh])
+            inference_state = processor.add_geometric_prompt(
+                state=inference_state, box=norm_box_cxcywh, label=True
+            )
+            max_score_i = torch.argmax(inference_state['scores'])
+            pcs_mask_l = inference_state['masks_logits'][max_score_i]
+            pcs_mask_l_comp = compress_logits(pcs_mask_l, target_size=(288, 288))
+            this_masks, this_scores, this_logits = model.predict_inst(
+                inference_state,
+                mask_input=pcs_mask_l_comp,
+                point_coords=point_coords_sorted[:n_kpts],
+                point_labels=np.ones_like(point_visibility_sorted[:n_kpts]),
+                multimask_output=False        )
+        else:
         # output_text = processor.set_text_prompt(state=inference_state, prompt=text_prompt)
-        this_masks, this_scores, this_logits = model.predict_inst(
-            inference_state,
-            point_coords=point_coords_sorted[:n_kpts],
-            point_labels=np.ones_like(point_visibility_sorted[:n_kpts]),
-            multimask_output=False        )
+            this_masks, this_scores, this_logits = model.predict_inst(
+                inference_state,
+                point_coords=point_coords_sorted[:n_kpts],
+                point_labels=np.ones_like(point_visibility_sorted[:n_kpts]),
+                multimask_output=False        )
         masks.append(this_masks)
         scores.append(this_scores)
         all_point_coords.append(point_coords_sorted[:n_kpts])
@@ -65,7 +80,7 @@ def process_img(device, model, processor, img_folder, img_path, img_out_folder, 
         logs.append(["Saved visualization: ", os.path.join(img_out_folder, img_path)])
     return logs, output
 
-def process_set(set_folder, set_out_folder=None, gt_folder=None, filename_to_id=None, id_to_kpts=None, args=None):
+def process_set(set_folder, set_out_folder=None, gt_folder=None, filename_to_id=None, id_to_kpts=None, id_to_bboxes=None, args=None):
     eval_arr = []
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -93,7 +108,7 @@ def process_set(set_folder, set_out_folder=None, gt_folder=None, filename_to_id=
             else:
                 continue
 
-        _, output = process_img(device, model, processor, set_folder, img_path, set_out_folder, id_to_kpts[img_id], args=args)
+        _, output = process_img(device, model, processor, set_folder, img_path, set_out_folder, id_to_kpts[img_id], id_to_bboxes[img_id], args=args)
         masks, scores = output
         # print(img_path, len(masks))
         if len(masks) == 0:
@@ -124,6 +139,6 @@ if __name__=="__main__":
     args = parse_args()
     SET_FOLDER, SET_OUT_FOLDER, GT_FOLDER, KPTS_FOLDER = determine_folders(args)
     filename_to_id, id_to_kpts = load_ids(KPTS_FOLDER)
-    id_to_kpts = load_pts(KPTS_FOLDER, id_to_kpts)
+    id_to_kpts, id_to_bboxes = load_pts_bboxes(KPTS_FOLDER, id_to_kpts)
 
-    process_set(SET_FOLDER, SET_OUT_FOLDER, GT_FOLDER, filename_to_id, id_to_kpts, args)
+    process_set(SET_FOLDER, SET_OUT_FOLDER, GT_FOLDER, filename_to_id, id_to_kpts, id_to_bboxes, args)

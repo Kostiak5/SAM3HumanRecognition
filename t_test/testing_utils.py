@@ -4,6 +4,8 @@ import cv2
 import numpy as np
 from PIL import Image
 import json
+from collections import defaultdict
+import torch.nn.functional as F
 
 def parse_args():
     parser = argparse.ArgumentParser(description="SAM 3 Human Recognition and Visualization")
@@ -40,14 +42,12 @@ def eval_set(eval_arr, gt_folder):
 def determine_folders(args):
     if args.dataset[-6:] == "server":
         base = "../../../data"
-    else:
-        base = "../sam2.1/sam2"
-    if args.dataset[-6:] == "server":
+        args.dataset = args.dataset[:-6]
         base_out = "../../../data"
     else:
+        base = "../sam2.1/sam2"
         base_out = "../data"
 
-    args.dataset = args.dataset[:-6]
 
     base_serv = "../../../data"
     if args.dataset == "COCO":
@@ -208,7 +208,7 @@ def load_ids(gt_folder):
         data = json.load(f)
         filename_to_id = {img['file_name']: img['id'] for img in data['images']}
         id_to_kpts = {img['id']: [] for img in data['images']}
-    
+
     return filename_to_id, id_to_kpts
 
 def load_pts(gt_folder, id_to_kpts):
@@ -219,5 +219,39 @@ def load_pts(gt_folder, id_to_kpts):
             vis = np.array(anno['visibility'])
             kpts[:, 2] = vis
             id_to_kpts[anno['image_id']].append(kpts)
-    
+
     return id_to_kpts
+
+def load_pts_bboxes(gt_folder, id_to_kpts, bbox=False):
+    id_to_bboxes = defaultdict(list)
+    with open(gt_folder, 'r') as f:
+        data = json.load(f)
+        for anno in data['annotations']:
+            kpts = np.array(anno['keypoints']).reshape(-1, 3)
+            vis = np.array(anno['visibility'])
+            kpts[:, 2] = vis
+            id_to_kpts[anno['image_id']].append(kpts)
+            id_to_bboxes[anno['image_id']].append(anno['bbox'])
+    
+    return id_to_kpts, id_to_bboxes
+
+def compress_logits(mask_logits, target_size=(256, 256)):
+    """
+    Compresses/Resizes mask logits to target_size [H, W].
+    Handles 2D, 3D, or 4D input tensors.
+    """
+    # 1. Ensure 4D shape: [Batch, Channel, Height, Width]
+    if mask_logits.ndim == 2:
+        mask_logits = mask_logits[None, None, :, :]
+    elif mask_logits.ndim == 3:
+        mask_logits = mask_logits[None, :, :, :]
+        
+    # 2. Perform the compression
+    compressed_logits = F.interpolate(
+        mask_logits, 
+        size=target_size, 
+        mode='bilinear', 
+        align_corners=False
+    )
+    
+    return compressed_logits
