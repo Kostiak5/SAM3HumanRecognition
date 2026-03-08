@@ -38,22 +38,26 @@ def process_img(device, model, processor, img_folder, img_path, img_out_folder, 
         if point_visibility_sorted is None:
             continue
 
-        if 'masks' in inference_state and inference_state['masks'].shape[0]:
+        
+        default_pred = True
+        if 'masks' in inference_state and inference_state['masks'].shape[0] > 0:
             norm_box_cxcywh = np.array([(bbox[0] + bbox[2]) / 2 / imgw, (bbox[1] + bbox[3]) / 2 / imgh, bbox[2] / imgw, bbox[3] / imgh])
             inference_state = processor.add_geometric_prompt(
                 state=inference_state, box=norm_box_cxcywh, label=True
             )
-            max_score_i = torch.argmax(inference_state['scores'])
-            pcs_mask_l = inference_state['masks_logits'][max_score_i]
-            pcs_mask_l_comp = compress_logits(pcs_mask_l, target_size=(288, 288))
-            this_masks, this_scores, this_logits = model.predict_inst(
-                inference_state,
-                mask_input=pcs_mask_l_comp,
-                point_coords=point_coords_sorted[:n_kpts],
-                point_labels=np.ones_like(point_visibility_sorted[:n_kpts]),
-                multimask_output=False        )
-        else:
+            if 'scores' in inference_state and inference_state['scores'].numel() > 0:
+                default_pred = False
+                max_score_i = torch.argmax(inference_state['scores'])
+                pcs_mask_l = inference_state['masks_logits'][max_score_i]
+                pcs_mask_l_comp = compress_logits(pcs_mask_l, target_size=(288, 288))
+                this_masks, this_scores, this_logits = model.predict_inst(
+                    inference_state,
+                    mask_input=pcs_mask_l_comp,
+                    point_coords=point_coords_sorted[:n_kpts],
+                    point_labels=np.ones_like(point_visibility_sorted[:n_kpts]),
+                    multimask_output=False        )
         # output_text = processor.set_text_prompt(state=inference_state, prompt=text_prompt)
+        if default_pred:
             this_masks, this_scores, this_logits = model.predict_inst(
                 inference_state,
                 point_coords=point_coords_sorted[:n_kpts],
