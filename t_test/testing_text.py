@@ -22,14 +22,12 @@ def process_img(device, model, processor, img_folder, img_path, img_out_folder, 
     image = Image.open(os.path.join(img_folder, img_path))
     inference_state = processor.set_image(image)
     inference_state = processor.set_text_prompt(state=inference_state, prompt=text_prompt)
-    outp = output["masks"][0]
-    print(outp)
     # Prompt the model with text
     logs.append("Image set")
 
     n_kpts = args.n_kpts
-    masks = inference_state["masks"]
-    scores = inference_state["scores"]
+    masks = inference_state["masks"].detach().cpu().numpy()
+    scores = inference_state["scores"].detach().cpu().to(torch.float32).numpy()
     
     # Get the masks, bounding boxes, and scores
     # masks, scores = output["masks"], output["boxes"], output["scores"]

@@ -11,6 +11,7 @@ def parse_args():
     parser = argparse.ArgumentParser(description="SAM 3 Human Recognition and Visualization")
 
     parser.add_argument('--vis', action="store_true")
+    parser.add_argument('--vis_folder', type=str, default="")
     parser.add_argument('--dataset', type=str, default="CIHP")
     parser.add_argument('--n_kpts', type=int, default=6)
 
@@ -48,8 +49,6 @@ def determine_folders(args):
         base = "../sam2.1/sam2"
         base_out = "../data"
 
-
-    base_serv = "../../../data"
     if args.dataset == "COCO":
         set_folder = os.path.join(base,"COCO/original/val2017")
         gt_folder = os.path.join(base,"COCO/original/annotations/person_keypoints_val2017.json")
@@ -65,7 +64,10 @@ def determine_folders(args):
         gt_folder = os.path.join(base,"CIHP/annotations/person_keypoints_val2017.json")
         kpts_folder = os.path.join(base,"CIHP/annotations/PMPose-b_GTmasks_CIHP_val.json")
 
-    set_out_folder = os.path.join(base_out, "SAM3_vis", "pt+text_prompt", f"vis_{args.dataset}")
+    if args.vis_folder == "":
+        set_out_folder = os.path.join(base_out, "SAM3_vis", "pt+text_prompt", f"vis_{args.dataset}")
+    else:
+        set_out_folder = os.path.join(base_out, "SAM3_vis", "pt+text_prompt", args.vis_folder)
 
     if not os.path.exists(set_out_folder):
         os.makedirs(set_out_folder)
@@ -83,7 +85,10 @@ def visualize(image_path, COLORS, boxes=None, scores=None, masks=None, points=No
     if img is None:
         raise ValueError(f"Failed to load image: {image_path}")
 
-    n = masks.shape[0]
+    if isinstance(masks, list):
+        n = len(masks)
+    else:
+        n = masks.shape[0]
     for i in range(n):
         score = scores[i]
         # print(masks[i], "mskshape")

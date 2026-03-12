@@ -9,7 +9,7 @@ from sam3.model.sam3_image_processor import Sam3Processor
 import pycocotools.mask as mask_util
 from tqdm import tqdm
 from t_test.testing_utils import determine_folders, parse_args, generate_colors, eval_set, visualize, select_keypoints, load_pts, load_ids, load_pts_bboxes, compress_logits
-
+import copy
 import argparse
 import os
 COLORS = generate_colors(50)
@@ -30,6 +30,8 @@ def process_img(device, model, processor, img_folder, img_path, img_out_folder, 
     masks = []
     scores = []
     all_point_coords = []
+    base_state = copy.deepcopy(inference_state)
+
     for pose_kpts, bbox in zip(pose_kpts_arr, bbox_arr):
     # print(pose_kpts[:, :2][:n_kpts], pose_kpts[:, 2][:n_kpts])
         point_coords = pose_kpts[:, :2]
@@ -41,9 +43,14 @@ def process_img(device, model, processor, img_folder, img_path, img_out_folder, 
         
         default_pred = True
         if 'masks' in inference_state and inference_state['masks'].shape[0] > 0:
-            norm_box_cxcywh = np.array([(bbox[0] + bbox[2]) / 2 / imgw, (bbox[1] + bbox[3]) / 2 / imgh, bbox[2] / imgw, bbox[3] / imgh])
+            norm_box_cxcywh = [
+                ((bbox[0] + bbox[2]) / 2) / imgw,
+                ((bbox[1] + bbox[3]) / 2) / imgh,
+                (bbox[2] - bbox[0]) / imgw,
+                (bbox[3] - bbox[1]) / imgh
+            ]
             inference_state = processor.add_geometric_prompt(
-                state=inference_state, box=norm_box_cxcywh, label=True
+                state=base_state, box=norm_box_cxcywh, label=True
             )
             if 'scores' in inference_state and inference_state['scores'].numel() > 0:
                 default_pred = False
