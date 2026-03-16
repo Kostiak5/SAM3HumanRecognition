@@ -14,6 +14,27 @@ import argparse
 import os
 COLORS = generate_colors(50)
 
+def assign_mask_to_kpts(masks, kpts):
+    mask_i = -1
+    for i, mask in enumerate(masks):
+        n_kpts_inside_mask = 0
+        for kpt in kpts:
+            if 0 < round(kpt[1]) < mask.shape[0] and 0 < round(kpt[0]) < mask.shape[1] and mask[round(kpt[1])][round(kpt[0])] == 1:
+                n_kpts_inside_mask += 1
+
+                if n_kpts_inside_mask >= 4:
+                    print("Found")
+                    break
+        if n_kpts_inside_mask >= 4:
+            print("Found later")
+            return i
+        elif n_kpts_inside_mask > 0:
+            mask_i = i
+    print("Not found:", mask_i)
+    return mask_i
+    
+    
+
 def process_img(device, model, processor, img_folder, img_path, img_out_folder, pose_kpts_arr, bbox_arr, text_prompt="human", args=None):
     logs = []
 
@@ -30,10 +51,11 @@ def process_img(device, model, processor, img_folder, img_path, img_out_folder, 
     masks = []
     scores = []
     all_point_coords = []
-    base_state = copy.deepcopy(inference_state)
+    base_gl_state = copy.deepcopy(inference_state)
 
     for pose_kpts, bbox in zip(pose_kpts_arr, bbox_arr):
     # print(pose_kpts[:, :2][:n_kpts], pose_kpts[:, 2][:n_kpts])
+        base_state = copy.deepcopy(base_gl_state)
         point_coords = pose_kpts[:, :2]
         point_visibility = pose_kpts[:, 2]
         point_coords_sorted, point_visibility_sorted, _ = select_keypoints(0.5, point_coords, point_visibility, method="distance+confidence")
@@ -42,7 +64,7 @@ def process_img(device, model, processor, img_folder, img_path, img_out_folder, 
 
         
         default_pred = True
-        if 'masks' in inference_state and inference_state['masks'].shape[0] > 0:
+        if 'masks' in base_state and base_state['masks'].shape[0] > 0:
             norm_box_cxcywh = [
                 ((bbox[0] + bbox[2]) / 2) / imgw,
                 ((bbox[1] + bbox[3]) / 2) / imgh,
@@ -54,25 +76,33 @@ def process_img(device, model, processor, img_folder, img_path, img_out_folder, 
             )
             if 'scores' in inference_state and inference_state['scores'].numel() > 0:
                 default_pred = False
-                max_score_i = torch.argmax(inference_state['scores'])
+                max_score_i = assign_mask_to_kpts(inference_state['masks'][0], point_coords_sorted)
+                if max_score_i == -1:
+                    inference_state = copy.deepcopy(base_state)
+                    max_score_i = np.argmax(inference_state['scores'].cpu().detach().to(torch.float32).numpy())
                 pcs_mask_l = inference_state['masks_logits'][max_score_i]
                 pcs_mask_l_comp = compress_logits(pcs_mask_l, target_size=(288, 288))
                 this_masks, this_scores, this_logits = model.predict_inst(
                     inference_state,
                     mask_input=pcs_mask_l_comp,
-                    point_coords=point_coords_sorted[:n_kpts],
-                    point_labels=np.ones_like(point_visibility_sorted[:n_kpts]),
+                    # point_coords=point_coords_sorted[:n_kpts],
+                    # point_labels=np.ones_like(point_visibility_sorted[:n_kpts]),
                     multimask_output=False        )
         # output_text = processor.set_text_prompt(state=inference_state, prompt=text_prompt)
+                # masks.append(inference_state["masks"][torch.argmax(inference_state['scores'])].cpu().detach().numpy())
+                # scores.append(inference_state["scores"][torch.argmax(inference_state['scores'])].cpu().detach().to(torch.float32).numpy())
+                
         if default_pred:
             this_masks, this_scores, this_logits = model.predict_inst(
-                inference_state,
+                base_state,
                 point_coords=point_coords_sorted[:n_kpts],
                 point_labels=np.ones_like(point_visibility_sorted[:n_kpts]),
                 multimask_output=False        )
         masks.append(this_masks)
         scores.append(this_scores)
+
         all_point_coords.append(point_coords_sorted[:n_kpts])
+
 
     
     # Get the masks, bounding boxes, and scores
