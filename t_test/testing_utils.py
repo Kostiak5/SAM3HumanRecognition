@@ -178,8 +178,8 @@ def select_keypoints(vis_thr, kpts, kpts_conf, ignore_limbs=False, method=None):
                 kpts_conf = np.concatenate([[facial_point_conf], kpts_conf[3:]], axis=0)
                 limbs_id = limbs_id[2:]
 
-        if (kpts_conf >= vis_thr).sum() < 6:
-            vis_thr = 0.0
+        # if (kpts_conf >= vis_thr).sum() < 6:
+        #     vis_thr = 0.0
 
         this_kpts = kpts[kpts_conf >= vis_thr, :2]
         kpts_conf = kpts_conf[kpts_conf >= vis_thr]
@@ -213,76 +213,75 @@ def select_keypoints(vis_thr, kpts, kpts_conf, ignore_limbs=False, method=None):
 
     return this_kpts, kpts_conf, selected_idx
 
-def select_keypoints(vis_thr, kpts, num_visible, ignore_limbs=False, method=None):
-    "Implements different methods for selecting keypoints for pose2seg"
+# def select_keypoints(vis_thr, kpts, kpts_conf, ignore_limbs=False, method=None):
+#     "Implements different methods for selecting keypoints for pose2seg"
 
-    if num_visible == 0:
-        return kpts[:, :2], kpts[:, 2], None
+#     if num_visible == 0:
+#         return kpts[:, :2], kpts[:, 2], None
 
-    limbs_id = [
-            0, 0, 0,        # Face
-            1, 1,           # Ears
-            2, 2,           # Shoulders - body
-            3, 4, 3, 4,     # Arms
-            7, 7,           # Hips - body
-            5, 6, 5, 6,     # Legs
-        ]
-    limbs_id = np.array(limbs_id)
+#     limbs_id = [
+#             0, 0, 0,        # Face
+#             1, 1,           # Ears
+#             2, 2,           # Shoulders - body
+#             3, 4, 3, 4,     # Arms
+#             7, 7,           # Hips - body
+#             5, 6, 5, 6,     # Legs
+#         ]
+#     limbs_id = np.array(limbs_id)
 
-    # Select 1 keypoint from the face
-    if not ignore_limbs:
-        facial_kpts = kpts[:3, :]
-        facial_conf = kpts[:3, 2]
-        facial_point = facial_kpts[np.argmax(facial_conf)]
-        if facial_point[-1] >= vis_thr:
-            kpts = np.concatenate([facial_point[None, :], kpts[3:]], axis=0)
-            limbs_id = limbs_id[2:]
+#     # Select 1 keypoint from the face
+#     if not ignore_limbs:
+#         facial_kpts = kpts[:3, :]
+#         facial_conf = kpts_conf[:3]
+#         facial_point = facial_kpts[np.argmax(facial_conf)]
+#         if facial_point[-1] >= vis_thr:
+#             kpts = np.concatenate([facial_point[None, :], kpts[3:]], axis=0)
+#             limbs_id = limbs_id[2:]
 
-    # Ignore invisible keypoints 
-    kpts_conf = kpts[:, 2]
-    this_kpts = kpts[kpts_conf >= vis_thr, :2]
-    if not ignore_limbs:
-        limbs_id = limbs_id[kpts_conf >= vis_thr]
-    kpts_conf = kpts_conf[kpts_conf >= vis_thr]
+#     # Ignore invisible keypoints 
+#     this_kpts = kpts[kpts_conf >= vis_thr, :2]
+#     if not ignore_limbs:
+#         limbs_id = limbs_id[kpts_conf >= vis_thr]
+#     kpts_conf = kpts_conf[kpts_conf >= vis_thr]
 
 
-    if method == "confidence":
+#     if method == "confidence":
 
-        # Sort by confidence
-        sort_idx = np.argsort(kpts_conf[kpts_conf >= vis_thr])[::-1]
-        this_kpts = this_kpts[sort_idx, :2]
-        kpts_conf = kpts_conf[sort_idx]
+#         # Sort by confidence
+#         sort_idx = np.argsort(kpts_conf[kpts_conf >= vis_thr])[::-1]
+#         this_kpts = this_kpts[sort_idx, :2]
+#         kpts_conf = kpts_conf[sort_idx]
 
-    elif method == "distance+confidence":
+#     elif method == "distance+confidence":
 
-        # Sort by confidence
+#         # Sort by confidence
 
-        sort_idx = np.argsort(kpts_conf[kpts_conf >= vis_thr])[::-1]
-        confidences = kpts[sort_idx, 2]
-        if confidences.shape[0] == 0:
-            return this_kpts, None, np.random.permutation(this_kpts.shape[0])
-        this_kpts = this_kpts[sort_idx, :2]
-        kpts_conf = kpts_conf[sort_idx]
-        # Compute distance matrix between all pairs
-        dist_matrix = np.linalg.norm(this_kpts[:, None, :2] - this_kpts[None, :, :2], axis=2)
-        # First keypoint is the one with the highest confidence        
-        selected_idx = [0]
-        confidences[0] = -1
-        for _ in range(this_kpts.shape[0] - 1):
-            # Compute the distance to the closest selected keypoint
-            min_dist = np.min(dist_matrix[:, selected_idx], axis=1)
+#         sort_idx = np.argsort(kpts_conf[kpts_conf >= vis_thr])[::-1]
+#         confidences = kpts[sort_idx, 2]
+#         if confidences.shape[0] == 0:
+#             return this_kpts, None, np.random.permutation(this_kpts.shape[0])
+#         this_kpts = this_kpts[sort_idx, :2]
+#         kpts_conf = kpts_conf[sort_idx]
+#         # Compute distance matrix between all pairs
+#         dist_matrix = np.linalg.norm(this_kpts[:, None, :2] - this_kpts[None, :, :2], axis=2)
+#         # First keypoint is the one with the highest confidence        
+#         selected_idx = [0]
+#         confidences[0] = -1
+#         for _ in range(this_kpts.shape[0] - 1):
+#             # Compute the distance to the closest selected keypoint
+#             min_dist = np.min(dist_matrix[:, selected_idx], axis=1)
             
-            # Consider only keypoints with confidence in top 50%
-            min_dist[confidences < np.percentile(confidences, 80)] = -1
+#             # Consider only keypoints with confidence in top 50%
+#             min_dist[confidences < np.percentile(confidences, 80)] = -1
             
-            next_idx = np.argmax(min_dist)
-            selected_idx.append(next_idx)
-            confidences[next_idx] = -1
+#             next_idx = np.argmax(min_dist)
+#             selected_idx.append(next_idx)
+#             confidences[next_idx] = -1
 
-        this_kpts = this_kpts[selected_idx]
-        kpts_conf = kpts_conf[selected_idx]
+#         this_kpts = this_kpts[selected_idx]
+#         kpts_conf = kpts_conf[selected_idx]
 
-    return this_kpts, kpts_conf, selected_idx
+#     return this_kpts, kpts_conf, selected_idx
 
 
 def load_ids(gt_folder):
