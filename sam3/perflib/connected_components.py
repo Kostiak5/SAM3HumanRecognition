@@ -50,35 +50,77 @@ def connected_components_cpu(input_tensor: torch.Tensor):
     return labels_tensor.view(out_shape), counts_tensor.view(out_shape)
 
 
+# def connected_components(input_tensor: torch.Tensor):
+#     """
+#     Computes connected components labeling on a batch of 2D tensors, using the best available backend.
+
+#     Args:
+#         input_tensor (torch.Tensor): A BxHxW integer tensor or Bx1xHxW. Non-zero values are considered foreground. Bool tensor also accepted
+
+#     Returns:
+#         Tuple[torch.Tensor, torch.Tensor]: Both tensors have the same shape as input_tensor.
+#             - A tensor with dense labels. Background is 0.
+#             - A tensor with the size of the connected component for each pixel.
+#     """
+#     if input_tensor.dim() == 3:
+#         input_tensor = input_tensor.unsqueeze(1)
+
+#     assert (
+#         input_tensor.dim() == 4 and input_tensor.shape[1] == 1
+#     ), "Input tensor must be (B, H, W) or (B, 1, H, W)."
+
+#     if input_tensor.is_cuda:
+#         if HAS_CC_TORCH:
+#             return get_connected_components(input_tensor.to(torch.uint8))
+#         else:
+#             # triton fallback
+#             from sam3.perflib.triton.connected_components import (
+#                 connected_components_triton,
+#             )
+
+#             return connected_components_triton(input_tensor)
+
+#     # CPU fallback
+#     return connected_components_cpu(input_tensor)
+
 def connected_components(input_tensor: torch.Tensor):
     """
-    Computes connected components labeling on a batch of 2D tensors, using the best available backend.
-
-    Args:
-        input_tensor (torch.Tensor): A BxHxW integer tensor or Bx1xHxW. Non-zero values are considered foreground. Bool tensor also accepted
-
-    Returns:
-        Tuple[torch.Tensor, torch.Tensor]: Both tensors have the same shape as input_tensor.
-            - A tensor with dense labels. Background is 0.
-            - A tensor with the size of the connected component for each pixel.
+    Forces CPU fallback to avoid Triton PTX errors on older GPUs (Pre-Volta/sm_70).
     """
+    # 1. Standardize shape to (B, 1, H, W)
+    orig_shape = input_tensor.shape
     if input_tensor.dim() == 3:
         input_tensor = input_tensor.unsqueeze(1)
+    
+    # 2. SKIP TRITON/CUDA (Fixes the sm_60 error)
+    # We move to CPU because the Triton kernel is incompatible with Pascal GPUs
+    from skimage.measure import label
+    import numpy as np
 
-    assert (
-        input_tensor.dim() == 4 and input_tensor.shape[1] == 1
-    ), "Input tensor must be (B, H, W) or (B, 1, H, W)."
-
-    if input_tensor.is_cuda:
-        if HAS_CC_TORCH:
-            return get_connected_components(input_tensor.to(torch.uint8))
-        else:
-            # triton fallback
-            from sam3.perflib.triton.connected_components import (
-                connected_components_triton,
-            )
-
-            return connected_components_triton(input_tensor)
-
-    # CPU fallback
-    return connected_components_cpu(input_tensor)
+    device = input_tensor.device
+    # Flatten batch and channel to process images individually
+    flat_input = input_tensor.view(-1, orig_shape[-2], orig_shape[-1]).cpu().numpy()
+    
+    all_labels = []
+    all_areas = []
+    
+    for img in flat_input:
+        # Convert to bool for skimage
+        binary_img = (img > 0)
+        labels_np, num = label(binary_img, return_num=True)
+        
+        areas_np = np.zeros_like(labels_np)
+        if num > 0:
+            # Fast area calculation
+            counts = np.bincount(labels_np.ravel())
+            areas_np = counts[labels_np]
+            areas_np[labels_np == 0] = 0 
+            
+        all_labels.append(torch.from_numpy(labels_np))
+        all_areas.append(torch.from_numpy(areas_np.astype(np.float32)))
+        
+    # Stack and move back to original device
+    labels_out = torch.stack(all_labels).view(orig_shape).to(device)
+    areas_out = torch.stack(all_areas).view(orig_shape).to(device)
+    
+    return labels_out, areas_out
