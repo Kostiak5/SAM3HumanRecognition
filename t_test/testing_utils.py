@@ -17,6 +17,34 @@ def parse_args():
 
     return parser.parse_args()
 
+def parse_args():
+    parser = argparse.ArgumentParser(
+        description="SAM 3 Human Recognition and Visualization Tool",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter 
+    )
+
+    parser.add_argument(
+        '--vis', 
+        action="store_true",
+        help="Enable visualization mode to display or save output images. Use vis_folder argument to specify where the visualized output should be saved."
+    )
+    parser.add_argument('--vis_folder', type=str, default="")
+    parser.add_argument(
+        '--dataset', 
+        type=str, 
+        default="CIHP",
+        help="Specify the dataset to use (e.g., 'CIHP', 'COCO', 'OCHUMAN')."
+    )
+    
+    parser.add_argument(
+        '--n_kpts', 
+        type=int, 
+        default=3,
+        help="Number of keypoints to sample per human instance for SAM prompting."
+    )
+
+    return parser.parse_args()
+
 def generate_colors(n=50, seed=42):
     """Generate n distinct RGB colors."""
     rng = np.random.default_rng(seed)
