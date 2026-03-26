@@ -178,7 +178,7 @@ class Sam3Processor:
         pts_tensor = torch.tensor(point, device=self.device, dtype=torch.float32).view(1, 1, 2)
         labels_tensor = torch.tensor([label], device=self.device, dtype=torch.bool).view(1, 1)
         state["geometric_prompt"].append_points(pts_tensor, labels_tensor)
-        return self._forward_grounding(state)
+        return self._forward_grounding(state, is_instance_prompt=True)
     
     def reset_all_prompts(self, state: Dict):
         """Removes all the prompts and results"""
@@ -209,12 +209,13 @@ class Sam3Processor:
         return state
 
     @torch.inference_mode()
-    def _forward_grounding(self, state: Dict):
+    def _forward_grounding(self, state: Dict, is_instance_prompt=True): ## EDITED
         outputs = self.model.forward_grounding(
             backbone_out=state["backbone_out"],
             find_input=self.find_stage,
             geometric_prompt=state["geometric_prompt"],
             find_target=None,
+            is_instance_prompt=is_instance_prompt ## EDITED
         )
 
         out_bbox = outputs["pred_boxes"]
