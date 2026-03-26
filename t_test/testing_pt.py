@@ -113,6 +113,14 @@ def process_set(set_folder, set_out_folder=None, gt_folder=None, filename_to_id=
                 "category_id": 1
             })
     
+    if SET_OUT_FOLDER is not None:
+        output_json_path = os.path.join(SET_OUT_FOLDER, f"output.json")
+
+        with open(output_json_path, 'w') as f:
+            json.dump(eval_arr, f)
+
+        print(f"Segmentation masks saved to: {output_json_path}")
+        
     eval_set(eval_arr, gt_folder)
 
 if __name__=="__main__":

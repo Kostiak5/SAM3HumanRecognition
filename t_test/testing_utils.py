@@ -71,7 +71,7 @@ def eval_set(eval_arr, gt_folder):
 
     for entry in cocoEval.evalImgs:
         if entry is None: continue
-        
+        print(entry)
         # dtMatches is a 2D array [iou_thresholds, detection_index]
         # 0 means it didn't match (FP), >0 is the ID of the matched GT (TP)
         # Let's look at the first IoU threshold (usually 0.5)
