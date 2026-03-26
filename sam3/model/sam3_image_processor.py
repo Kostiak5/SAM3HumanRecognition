@@ -153,6 +153,33 @@ class Sam3Processor:
 
         return self._forward_grounding(state)
 
+    ## EDITED
+    def add_point_prompt(self, point, label: bool, state: Dict):
+        '''
+        No explicit method for adding a point prompt, so implemented manually by referring to issue #337, 395
+
+        Args:
+            point: 
+            label (bool): pos / neg 
+            state (dict): inference_state
+        '''
+        if "backbone_out" not in state:
+            raise ValueError("You must call set_image before set_text_prompt")
+        
+        if "language_features" not in state["backbone_out"]:
+            dummy_text_outputs = self.model.backbone.forward_text(
+                ["visual"], device=self.device
+            )
+            state["backbone_out"].update(dummy_text_outputs)
+        
+        if "geometric_prompt" not in state:
+            state["geometric_prompt"] = self.model._get_dummy_prompt()
+
+        pts_tensor = torch.tensor(point, device=self.device, dtype=torch.float32).view(1, 1, 2)
+        labels_tensor = torch.tensor([label], device=self.device, dtype=torch.bool).view(1, 1)
+        state["geometric_prompt"].append_points(pts_tensor, labels_tensor)
+        return self._forward_grounding(state)
+    
     def reset_all_prompts(self, state: Dict):
         """Removes all the prompts and results"""
         if "backbone_out" in state:

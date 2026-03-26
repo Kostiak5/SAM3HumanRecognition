@@ -102,10 +102,21 @@ def visualize(image_path, COLORS, boxes=None, scores=None, masks=None, points=No
         color_bgr = (color[2], color[1], color[0])     # Convert to BGR for OpenCV
 
         # Draw bounding box
+        if boxes is None and masks is not None:
+            mask = np.squeeze(masks[i])
+            print(masks[i].shape)
+            y_indices, x_indices = np.where(mask > 0)
+            
+            # If the mask is empty, skip drawing the box
+            if len(x_indices) == 0 or len(y_indices) == 0:
+                continue
+                
+            x1, x2 = np.min(x_indices), np.max(x_indices)
+            y1, y2 = np.min(y_indices), np.max(y_indices)
         if boxes is not None:
             x1, y1, x2, y2 = boxes[i].astype(int)
             cv2.rectangle(img, (x1, y1), (x2, y2), color_bgr, 2)
-
+        if masks is not None:
             # Draw score label
             cv2.putText(img, f"{score:.2f}", (x1, y1 - 4),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.6, color_bgr, 2)
@@ -129,7 +140,7 @@ def visualize(image_path, COLORS, boxes=None, scores=None, masks=None, points=No
 
         if points is not None:
             # Reshape to (-1, 2) to handle both [N, 2] and [N, K, 2] point arrays
-            for pt in points[i]:
+            for pt in points:
                 px, py = int(pt[0]), int(pt[1])
                 # Skip if point is at (0,0) assuming it's a padded/invalid point
                 if px == 0 and py == 0:
