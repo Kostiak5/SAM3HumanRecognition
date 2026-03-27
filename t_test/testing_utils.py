@@ -77,8 +77,8 @@ def eval_set(eval_arr, gt_folder):
         # Let's look at the first IoU threshold (usually 0.5)
         matches = entry['dtMatches'][0] 
         
-        tps += sum(1 for m in matches if m > 0)
-        fps += sum(1 for m in matches if m == 0)
+        tps += sum(1 for m in matches if m != -1)
+        fps += sum(1 for m in matches if m == -1)
 
     print(f"Total TPs (at IoU 0.5): {tps}")
     print(f"Total FPs (at IoU 0.5): {fps}")
