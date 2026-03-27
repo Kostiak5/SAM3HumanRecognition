@@ -78,8 +78,11 @@ def eval_set(eval_arr, gt_folder):
         # 0 means it didn't match (FP), >0 is the ID of the matched GT (TP)
         # Let's look at the first IoU threshold (usually 0.5)
         matches = entry['dtMatches'][0] 
-        scores = entry['dtScores'][0] 
-        for sc, m in enumerate(scores, matches):
+        scores = entry['dtScores']
+        ignores = entry['dtIgnore'][0]
+        for sc, m, ignore in zip(scores, matches, ignores):
+            if ignore:
+                continue
             if m == -1:
                 fps += 1
                 fpscores += sc
