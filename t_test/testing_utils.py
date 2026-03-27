@@ -68,6 +68,8 @@ def eval_set(eval_arr, gt_folder):
 
     fps = 0
     tps = 0
+    fpscores = 0
+    tpscores = 0
 
     for entry in cocoEval.evalImgs:
         if entry is None: continue
@@ -76,12 +78,17 @@ def eval_set(eval_arr, gt_folder):
         # 0 means it didn't match (FP), >0 is the ID of the matched GT (TP)
         # Let's look at the first IoU threshold (usually 0.5)
         matches = entry['dtMatches'][0] 
-        
-        tps += sum(1 for m in matches if m != -1)
-        fps += sum(1 for m in matches if m == -1)
+        scores = entry['dtScores'][0] 
+        for sc, m in enumerate(scores, matches):
+            if m == -1:
+                fps += 1
+                fpscores += sc
+            else:
+                tps += 1
+                tpscores += sc
 
-    print(f"Total TPs (at IoU 0.5): {tps}")
-    print(f"Total FPs (at IoU 0.5): {fps}")
+    print(f"Total TPs (at IoU 0.5): {tps}, avg score: {tpscores / tps}")
+    print(f"Total FPs (at IoU 0.5): {fps}, avg score: {fpscores / fps}")
     print("evaluating, dumping ", cocoEval.stats[0].item())
 
 
