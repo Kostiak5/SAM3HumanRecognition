@@ -432,6 +432,7 @@ def compress_logits(mask_logits, target_size=(256, 256)):
 if __name__ == "__main__":
     args = parse_evalonly_args()
     _, set_out_folder, gt_folder, _ = determine_folders(args)
+    print(f"Folders: GT {gt_folder} Setout {os.path.join(set_out_folder, args.file)}")
     with open(os.path.join(set_out_folder, args.file), 'r') as file:
         data = json.load(file)
 
