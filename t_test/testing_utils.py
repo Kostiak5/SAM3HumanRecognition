@@ -45,6 +45,32 @@ def parse_args():
 
     return parser.parse_args()
 
+def parse_evalonly_args():
+    parser = argparse.ArgumentParser(
+        description="SAM 3 Human Recognition and Visualization Tool",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter 
+    )
+
+    parser.add_argument(
+        '--dataset', 
+        type=str, 
+        default="CIHP",
+        help="Specify the dataset to use (e.g., 'CIHP', 'COCO', 'OCHUMAN')."
+    )
+    parser.add_argument(
+        '--file', 
+        type=str, 
+        default="output.json",
+        help="Specify the file to open inside the dir."
+    )
+    parser.add_argument(
+        '--vis_folder', 
+        type=str, 
+        default="",
+    )
+
+    return parser.parse_args()
+
 def generate_colors(n=50, seed=42):
     """Generate n distinct RGB colors."""
     rng = np.random.default_rng(seed)
@@ -402,3 +428,11 @@ def compress_logits(mask_logits, target_size=(256, 256)):
     )
     
     return compressed_logits
+
+if __name__ == "__main__":
+    args = parse_evalonly_args()
+    _, set_out_folder, gt_folder, _ = determine_folders(args)
+    with open(os.path.join(set_out_folder, args.file), 'r') as file:
+        data = json.load(file)
+
+    eval_set(data, gt_folder)
