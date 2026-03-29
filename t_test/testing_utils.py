@@ -129,6 +129,7 @@ def eval_set(eval_arr, gt_folder):
         gt_ids = entry['gtIds']
         scores = entry['dtScores']
         iou_scores = 0
+        tps = 0
         for dt_idx, gt_match_id in enumerate(matches):
             dt_id = dt_ids[dt_idx]
             score = scores[dt_idx]
@@ -143,6 +144,7 @@ def eval_set(eval_arr, gt_folder):
                 # Extract the exact IoU from the matrix
                 exact_iou = iou_matrix[dt_idx][gt_idx]
                 iou_scores += exact_iou
+                tps += 1
                 print(f"[TP] Detection {dt_id} | Score: {score:.3f} | Exact IoU: {exact_iou:.3f}")
 
             else:
