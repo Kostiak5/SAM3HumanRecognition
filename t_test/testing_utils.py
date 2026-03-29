@@ -128,6 +128,7 @@ def eval_set(eval_arr, gt_folder):
         dt_ids = entry['dtIds']
         gt_ids = entry['gtIds']
         scores = entry['dtScores']
+        iou_scores = 0
         for dt_idx, gt_match_id in enumerate(matches):
             dt_id = dt_ids[dt_idx]
             score = scores[dt_idx]
@@ -141,7 +142,7 @@ def eval_set(eval_arr, gt_folder):
                 
                 # Extract the exact IoU from the matrix
                 exact_iou = iou_matrix[dt_idx][gt_idx]
-                
+                iou_scores += exact_iou
                 print(f"[TP] Detection {dt_id} | Score: {score:.3f} | Exact IoU: {exact_iou:.3f}")
 
             else:
@@ -157,8 +158,8 @@ def eval_set(eval_arr, gt_folder):
                 print(f"[FP] Detection {dt_id} | Score: {score:.3f} | Max IoU (Near Miss): {best_miss_iou:.3f}")
 
 
-    print(f"Total TPs (at IoU 0.5): {tps}, avg score: {tpscores / tps}")
-    print(f"Total FPs (at IoU 0.5): {fps}, avg score: {fpscores / fps}")
+    print(f"Total TPs (at IoU 0.5): {tps}, avg score: {tpscores / tps}, avg IOU: {iou_scores / tps}")
+    print(f"Total FPs (at IoU 0.5): {fps}, avg score: {fpscores / fps}, all IOU: {iou_scores / (tps + fps)}")
     print("evaluating, dumping ", cocoEval.stats[0].item())
 
 
