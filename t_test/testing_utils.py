@@ -115,7 +115,48 @@ def eval_set(eval_arr, gt_folder):
             else:
                 tps += 1
                 tpscores += sc
-    
+        
+        img_id = entry['image_id']
+        cat_id = entry['category_id']
+
+        # Retrieve the raw IoU matrix for this specific image and category.
+        # Shape: [number_of_detections, number_of_ground_truths]
+        iou_matrix = cocoEval.ious.get((img_id, cat_id), [])
+
+        # We'll look at the first IoU threshold (0.50)
+        matches = entry['dtMatches'][0] 
+        dt_ids = entry['dtIds']
+        gt_ids = entry['gtIds']
+        scores = entry['dtScores']
+        for dt_idx, gt_match_id in enumerate(matches):
+            dt_id = dt_ids[dt_idx]
+            score = scores[dt_idx]
+
+            if gt_match_id > 0:
+                # ---------------------------------------------------
+                # TRUE POSITIVE (Matched a Ground Truth)
+                # ---------------------------------------------------
+                # We need to find which column in the matrix belongs to this GT
+                gt_idx = gt_ids.index(gt_match_id) 
+                
+                # Extract the exact IoU from the matrix
+                exact_iou = iou_matrix[dt_idx][gt_idx]
+                
+                print(f"[TP] Detection {dt_id} | Score: {score:.3f} | Exact IoU: {exact_iou:.3f}")
+
+            else:
+                # ---------------------------------------------------
+                # FALSE POSITIVE (Did not match a Ground Truth)
+                # ---------------------------------------------------
+                # Even if it's an FP, we can check the matrix to see its *highest* # overlapping IoU with any GT (e.g., maybe it was a "near miss" at 0.48 IoU)
+                if len(iou_matrix) > 0 and len(iou_matrix[dt_idx]) > 0:
+                    best_miss_iou = max(iou_matrix[dt_idx])
+                else:
+                    best_miss_iou = 0.0
+                    
+                print(f"[FP] Detection {dt_id} | Score: {score:.3f} | Max IoU (Near Miss): {best_miss_iou:.3f}")
+
+
     print(f"Total TPs (at IoU 0.5): {tps}, avg score: {tpscores / tps}")
     print(f"Total FPs (at IoU 0.5): {fps}, avg score: {fpscores / fps}")
     print("evaluating, dumping ", cocoEval.stats[0].item())
