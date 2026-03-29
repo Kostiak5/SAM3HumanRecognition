@@ -96,66 +96,53 @@ def eval_set(eval_arr, gt_folder):
     tps = 0
     fpscores = 0
     tpscores = 0
-
+    iou_scores = 0
     for entry in cocoEval.evalImgs:
         if entry is None: continue
-        # print(entry)
-        # dtMatches is a 2D array [iou_thresholds, detection_index]
-        # 0 means it didn't match (FP), >0 is the ID of the matched GT (TP)
-        # Let's look at the first IoU threshold (usually 0.5)
-        matches = entry['dtMatches'][0] 
-        scores = entry['dtScores']
-        ignores = entry['dtIgnore'][0]
-        for sc, m, ignore in zip(scores, matches, ignores):
-            if ignore:
-                continue
-            if m == -1:
-                fps += 1
-                fpscores += sc
-            else:
-                tps += 1
-                tpscores += sc
         
-    img_id = entry['image_id']
-    cat_id = entry['category_id']
+        img_id = entry['image_id']
+        cat_id = entry['category_id']
 
-    # Retrieve the raw IoU matrix for this specific image and category.
-    # Shape: [number_of_detections, number_of_ground_truths]
-    iou_matrix = cocoEval.ious.get((img_id, cat_id), [])
+        # Retrieve the raw IoU matrix for this specific image and category.
+        # Shape: [number_of_detections, number_of_ground_truths]
+        iou_matrix = cocoEval.ious.get((img_id, cat_id), [])
 
-    # We'll look at the first IoU threshold (0.50)
-    matches = entry['dtMatches'][0] 
-    dt_ids = entry['dtIds']
-    gt_ids = entry['gtIds']
-    scores = entry['dtScores']
-    iou_scores = 0
-    for dt_idx, gt_match_id in enumerate(matches):
-        dt_id = dt_ids[dt_idx]
-        score = scores[dt_idx]
+        # We'll look at the first IoU threshold (0.50)
+        matches = entry['dtMatches'][0] 
+        dt_ids = entry['dtIds']
+        gt_ids = entry['gtIds']
+        scores = entry['dtScores']
+        for dt_idx, gt_match_id in enumerate(matches):
+            dt_id = dt_ids[dt_idx]
+            score = scores[dt_idx]
 
-        if gt_match_id > 0:
-            # ---------------------------------------------------
-            # TRUE POSITIVE (Matched a Ground Truth)
-            # ---------------------------------------------------
-            # We need to find which column in the matrix belongs to this GT
-            gt_idx = gt_ids.index(gt_match_id) 
-            
-            # Extract the exact IoU from the matrix
-            exact_iou = iou_matrix[dt_idx][gt_idx]
-            iou_scores += exact_iou
-            print(f"[TP] Detection {dt_id} | Score: {score:.3f} | Exact IoU: {exact_iou:.3f}")
-
-        else:
-            # ---------------------------------------------------
-            # FALSE POSITIVE (Did not match a Ground Truth)
-            # ---------------------------------------------------
-            # Even if it's an FP, we can check the matrix to see its *highest* # overlapping IoU with any GT (e.g., maybe it was a "near miss" at 0.48 IoU)
-            if len(iou_matrix) > 0 and len(iou_matrix[dt_idx]) > 0:
-                best_miss_iou = max(iou_matrix[dt_idx])
-            else:
-                best_miss_iou = 0.0
+            if gt_match_id > 0:
+                tps += 1
+                tpscores += score
+                # ---------------------------------------------------
+                # TRUE POSITIVE (Matched a Ground Truth)
+                # ---------------------------------------------------
+                # We need to find which column in the matrix belongs to this GT
+                gt_idx = gt_ids.index(gt_match_id) 
                 
-            print(f"[FP] Detection {dt_id} | Score: {score:.3f} | Max IoU (Near Miss): {best_miss_iou:.3f}")
+                # Extract the exact IoU from the matrix
+                exact_iou = iou_matrix[dt_idx][gt_idx]
+                iou_scores += exact_iou
+                print(f"[TP] Detection {dt_id} | Score: {score:.3f} | Exact IoU: {exact_iou:.3f}")
+
+            else:
+                fps += 1
+                fpscores += score
+                # ---------------------------------------------------
+                # FALSE POSITIVE (Did not match a Ground Truth)
+                # ---------------------------------------------------
+                # Even if it's an FP, we can check the matrix to see its *highest* # overlapping IoU with any GT (e.g., maybe it was a "near miss" at 0.48 IoU)
+                if len(iou_matrix) > 0 and len(iou_matrix[dt_idx]) > 0:
+                    best_miss_iou = max(iou_matrix[dt_idx])
+                else:
+                    best_miss_iou = 0.0
+                    
+                print(f"[FP] Detection {dt_id} | Score: {score:.3f} | Max IoU (Near Miss): {best_miss_iou:.3f}")
 
 
     print(f"Total TPs (at IoU 0.5): {tps}, avg score: {tpscores / tps}, avg IOU: {iou_scores / tps}")
