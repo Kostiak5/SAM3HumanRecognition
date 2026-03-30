@@ -173,10 +173,9 @@ def eval_set(eval_arr, gt_folder):
     # ==========================================================
     # cocoDt.dataset['annotations'] holds the list of all predictions 
     # with the 'id's that cocoGt.loadRes() assigned to them.
-    original_preds = cocoDt.dataset['annotations']
     
     # Keep only the predictions whose ID is NOT in the False Positive set
-    filtered_preds = [ann for ann in original_preds if ann['id'] not in fp_ids]
+    filtered_preds = [ann for ann in eval_arr if ann['id'] not in fp_ids]
     cocoDt_filtered = cocoGt.loadRes(filtered_preds)
     
     cocoEval_filtered = COCOeval(cocoGt, cocoDt_filtered, 'segm', sigmas=None, use_area=True)
