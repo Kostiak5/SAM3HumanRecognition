@@ -85,7 +85,7 @@ def process_img(device, model, processor, img_folder, img_path, img_out_folder, 
             point_coords=point_coords_sorted[:i],
             point_labels=np.ones_like(point_visibility_sorted[:i]),
             multimask_output=False,
-            hs_queries=base_state['hs']        )
+            )
 
         if 'scores' in base_state and len(base_state['scores']) != 0:
             # this_masks = base_state["masks"].cpu().detach().numpy()
