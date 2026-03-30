@@ -82,8 +82,8 @@ def process_img(device, model, processor, img_folder, img_path, img_out_folder, 
             # cv2.imwrite(os.path.join(img_out_folder, f"{img_path}_{idx}_{i}.jpg"), image_out)
             this_masks, this_scores, this_logits = model.predict_inst(
             inference_state,
-            point_coords=point_coords_sorted[:i],
-            point_labels=np.ones_like(point_visibility_sorted[:i]),
+            point_coords=point_coords_sorted[:n_kpts],
+            point_labels=np.ones_like(point_visibility_sorted[:n_kpts]),
             multimask_output=False,
             )
 
