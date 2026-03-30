@@ -210,10 +210,11 @@ class MaskDecoder(nn.Module):
         b, c, h, w = src.shape
 
         ## EDITED
-        if hs_queries.dim() == 4:
-            hs_queries = hs_queries[-1]
-        enhanced_prompt_embeddings = torch.cat([sparse_prompt_embeddings, hs_queries], dim=1)
-        tokens = torch.cat((output_tokens, enhanced_prompt_embeddings), dim=1)
+        if hs_queries is not None:
+            if hs_queries.dim() == 4:
+                hs_queries = hs_queries[-1]
+            enhanced_prompt_embeddings = torch.cat([sparse_prompt_embeddings, hs_queries], dim=1)
+            tokens = torch.cat((output_tokens, enhanced_prompt_embeddings), dim=1)
 
         # Run the transformer
         hs, src = self.transformer(src, pos_src, tokens)
