@@ -260,6 +260,7 @@ class Sam3Image(torch.nn.Module):
         prompt,
         prompt_mask,
         encoder_out,
+        is_instance_prompt=False
     ):
         bs = memory.shape[1]
         query_embed = self.transformer.decoder.query_embed.weight
@@ -296,6 +297,7 @@ class Sam3Image(torch.nn.Module):
             prompt,
             prompt_mask,
             dec_presence_out=dec_presence_out,
+            is_instance_prompt=is_instance_prompt
         )
         return out, hs
 
@@ -474,6 +476,7 @@ class Sam3Image(torch.nn.Module):
                 prompt=prompt,
                 prompt_mask=prompt_mask,
                 encoder_out=encoder_out,
+                is_instance_prompt=is_instance_prompt
             )
 
         # Run segmentation heads
