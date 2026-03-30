@@ -43,7 +43,7 @@ def process_img(device, model, processor, img_folder, img_path, img_out_folder, 
     image = Image.open(os.path.join(img_folder, img_path))
     imgw, imgh = image.size
     inference_state = processor.set_image(image)
-    inference_state = processor.set_text_prompt(state=inference_state, prompt=text_prompt)
+    # inference_state = processor.set_text_prompt(state=inference_state, prompt=text_prompt)
     # Prompt the model with text
     logs.append("Image set")
 
