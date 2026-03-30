@@ -80,25 +80,30 @@ def process_img(device, model, processor, img_folder, img_path, img_out_folder, 
             #             points=point_coords_sorted[:(i+1)]
             #         )
             # cv2.imwrite(os.path.join(img_out_folder, f"{img_path}_{idx}_{i}.jpg"), image_out)
+            this_masks, this_scores, this_logits = model.predict_inst(
+            inference_state,
+            point_coords=point_coords_sorted[:i],
+            point_labels=np.ones_like(point_visibility_sorted[:i]),
+            multimask_output=False,
+            hs_queries=base_state['hs']        )
 
         if 'scores' in base_state and len(base_state['scores']) != 0:
-            this_masks = base_state["masks"].cpu().detach().numpy()
-            this_scores = base_state["scores"].cpu().detach().to(torch.float32).numpy()
-            max_score_mask = np.argmax(this_scores)
-            masks.append(this_masks[max_score_mask])
-            scores.append(this_scores[max_score_mask])
+            # this_masks = base_state["masks"].cpu().detach().numpy()
+            # this_scores = base_state["scores"].cpu().detach().to(torch.float32).numpy()
+            # max_score_mask = np.argmax(this_scores)
+            masks.append(this_masks[0])
+            scores.append(this_scores[0])
             if args is not None and args.vis and base_state["masks"] is not None and len(base_state["masks"]) > 0:
                 print(base_state["masks"].cpu().detach().numpy().shape)
                 image_out = visualize(
                         os.path.join(img_folder, img_path),
                         COLORS,
-                        masks=np.array([this_masks[max_score_mask]]),
-                        scores=np.array([this_scores[max_score_mask]]),
+                        masks=np.array([this_masks[0]]),
+                        scores=np.array([this_scores[0]]),
                         points=[point_coords_sorted[0]]
                     )
                 cv2.imwrite(os.path.join(img_out_folder, f"{img_path}_{idx}.jpg"), image_out)
                 logs.append(["Saved visualization: ", os.path.join(img_out_folder, img_path)])
-    print(all_point_coords)
 
     
     # Get the masks, bounding boxes, and scores
