@@ -149,6 +149,41 @@ def eval_set(eval_arr, gt_folder):
     print(f"Total FPs (at IoU 0.5): {fps}, avg score: {fpscores / fps}, all IOU: {iou_scores / (tps + fps)}")
     print("evaluating, dumping ", cocoEval.stats[0].item())
 
+    fp_ids = set()
+    
+    for entry in cocoEval.evalImgs:
+        if entry is None: 
+            continue
+            
+        # We use the first IoU threshold (0.50) to define a strict FP
+        matches = entry['dtMatches'][0] 
+        ignores = entry['dtIgnore'][0]
+        dt_ids = entry['dtIds']          # The unique IDs of the detections
+        
+        for m, ignore, dt_id in zip(matches, ignores, dt_ids):
+            if ignore:
+                continue
+            
+            # If match is 0, it is a False Positive
+            if m == 0:
+                fp_ids.add(dt_id)
+
+    # ==========================================================
+    # 3. FILTER OUT THE FALSE POSITIVES
+    # ==========================================================
+    # cocoDt.dataset['annotations'] holds the list of all predictions 
+    # with the 'id's that cocoGt.loadRes() assigned to them.
+    original_preds = cocoDt.dataset['annotations']
+    
+    # Keep only the predictions whose ID is NOT in the False Positive set
+    filtered_preds = [ann for ann in original_preds if ann['id'] not in fp_ids]
+    cocoDt_filtered = cocoGt.loadRes(filtered_preds)
+    
+    cocoEval_filtered = COCOeval(cocoGt, cocoDt_filtered, 'segm', sigmas=None, use_area=True)
+    cocoEval_filtered.evaluate()
+    cocoEval_filtered.accumulate()
+    cocoEval_filtered.summarize()
+
 
 def determine_folders(args):
     if args.dataset[-6:] == "server":
