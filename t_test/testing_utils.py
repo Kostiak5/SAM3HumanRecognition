@@ -128,7 +128,7 @@ def eval_set(eval_arr, gt_folder):
                 # Extract the exact IoU from the matrix
                 exact_iou = iou_matrix[dt_idx][gt_idx]
                 iou_scores += exact_iou
-                print(f"[TP] Detection {dt_id} | Score: {score:.3f} | Exact IoU: {exact_iou:.3f}")
+                # print(f"[TP] Detection {dt_id} | Score: {score:.3f} | Exact IoU: {exact_iou:.3f}")
 
             else:
                 fps += 1
@@ -142,7 +142,7 @@ def eval_set(eval_arr, gt_folder):
                 else:
                     best_miss_iou = 0.0
                     
-                print(f"[FP] Detection {dt_id} | Score: {score:.3f} | Max IoU (Near Miss): {best_miss_iou:.3f}")
+                # print(f"[FP] Detection {dt_id} | Score: {score:.3f} | Max IoU (Near Miss): {best_miss_iou:.3f}")
 
 
     print(f"Total TPs (at IoU 0.5): {tps}, avg score: {tpscores / tps}, avg IOU: {iou_scores / tps}")
