@@ -14,7 +14,7 @@ import argparse
 import os
 COLORS = generate_colors(50)
 
-def process_img(device, model, processor, img_folder, img_path, img_out_folder, pose_kpts_arr, text_prompt="human", args=None):
+def process_img(device, model, processor, img_folder, img_path, img_out_folder, pose_kpts_arr, text_prompt="person", args=None):
     logs = []
 
     # Load an image
