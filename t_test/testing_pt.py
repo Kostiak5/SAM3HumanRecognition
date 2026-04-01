@@ -42,6 +42,7 @@ def process_img(device, model, processor, img_folder, img_path, img_out_folder, 
             point_coords=point_coords_sorted[:n_kpts],
             point_labels=np.ones_like(point_visibility_sorted[:n_kpts]),
             multimask_output=False        )
+        print(this_logits.shape)
         masks.append(this_masks)
         scores.append(this_scores)
         all_point_coords.append(point_coords_sorted[:n_kpts])

@@ -175,13 +175,13 @@ def eval_set(eval_arr, gt_folder):
     # with the 'id's that cocoGt.loadRes() assigned to them.
     
     # Keep only the predictions whose ID is NOT in the False Positive set
-    filtered_preds = [ann for ann in eval_arr if ann['id'] not in fp_ids]
-    for ann in filtered_preds:
+    # filtered_preds = [ann for ann in eval_arr if ann['id'] not in fp_ids]
+    for ann in eval_arr:
         if 'score' in ann:
             ann['score'] = 1.0
         if 'bbox' in ann and hasattr(ann['bbox'], 'tolist'):
             ann['bbox'] = ann['bbox'].tolist()
-    cocoDt_filtered = cocoGt.loadRes(filtered_preds)
+    cocoDt_filtered = cocoGt.loadRes(eval_arr)
     
     cocoEval_filtered = COCOeval(cocoGt, cocoDt_filtered, 'segm', sigmas=None, use_area=True)
     cocoEval_filtered.evaluate()

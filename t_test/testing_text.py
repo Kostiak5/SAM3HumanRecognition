@@ -26,9 +26,10 @@ def process_img(device, model, processor, img_folder, img_path, img_out_folder, 
     logs.append("Image set")
 
     n_kpts = args.n_kpts
+
     masks = inference_state["masks"].detach().cpu().numpy()
     scores = inference_state["scores"].detach().cpu().to(torch.float32).numpy()
-    
+    print(inference_state["logits"].shape)
     # Get the masks, bounding boxes, and scores
     # masks, scores = output["masks"], output["boxes"], output["scores"]
     logs.append([scores])
