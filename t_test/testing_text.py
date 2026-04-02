@@ -53,7 +53,7 @@ def process_set(set_folder, set_out_folder=None, gt_folder=None, filename_to_id=
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Loading model on: {device.type.upper()}")
     
-    model = build_sam3_image_model(enable_inst_interactivity=True, multimask_output = True)
+    model = build_sam3_image_model(enable_inst_interactivity=True, multimask_output = False)
     model.to(device) 
 
     processor = Sam3Processor(model)
