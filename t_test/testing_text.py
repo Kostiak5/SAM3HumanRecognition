@@ -21,7 +21,7 @@ def process_img(device, model, processor, img_folder, img_path, img_out_folder, 
     logs.append("Start processing")
     image = Image.open(os.path.join(img_folder, img_path))
     inference_state = processor.set_image(image)
-    inference_state = processor.set_text_prompt(state=inference_state, prompt=text_prompt)
+    inference_state = processor.set_text_prompt(state=inference_state, prompt=text_prompt, multimask_output=True)
     # Prompt the model with text
     logs.append("Image set")
 
@@ -34,14 +34,16 @@ def process_img(device, model, processor, img_folder, img_path, img_out_folder, 
     # masks, scores = output["masks"], output["boxes"], output["scores"]
     logs.append([scores])
     output = [masks, scores]
+    print(masks.shape, scores.shape)
     if args is not None and args.vis:
-        image_out = visualize(
-                os.path.join(img_folder, img_path),
-                COLORS,
-                masks=masks,
-                scores=scores
-        )
-        cv2.imwrite(os.path.join(img_out_folder, img_path), image_out)
+        for i in range(3):
+            image_out = visualize(
+                    os.path.join(img_folder, img_path),
+                    COLORS,
+                    masks=masks[i],
+                    scores=scores[i]
+            )
+            cv2.imwrite(os.path.join(img_folder, f"{img_path}_{i}.jpg"), image_out)
         logs.append(["Saved visualization: ", os.path.join(img_out_folder, img_path)])
     return logs, output
 
