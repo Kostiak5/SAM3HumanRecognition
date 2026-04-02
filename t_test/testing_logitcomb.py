@@ -88,7 +88,7 @@ def process_img(device, model, processor, img_folder, img_path, img_out_folder, 
                 point_labels=np.ones_like(point_visibility_sorted[:n_kpts]),
                 multimask_output=False
             )
-            if pvs_logits is not None and base_state["masks_logits"] is not None:
+            if pvs_logits is not None and base_state["masks_logits"] is not None and base_state["masks_logits"].shape[0] >= 1:
                 pcs_logits = base_state["masks_logits"]
                 pvs_logits = torch.from_numpy(pvs_logits).to(device)
                 resized_pvs_logits = F.interpolate( # scale to PCS (imgw, imgh) logit format
