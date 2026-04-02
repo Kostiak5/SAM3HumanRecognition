@@ -109,6 +109,7 @@ def process_img(device, model, processor, img_folder, img_path, img_out_folder, 
                 pcs_best_logits = pcs_logits[closest_idx]
 
                 combined_logits = (sigmoid_pvs_logits[0] + pcs_best_logits) * 0.5
+                pcs_best_logits_np = pcs_best_logits.cpu().detach().numpy()            
                 best_mask = combined_logits > 0.5
                 best_mask_np = best_mask.cpu().detach().numpy()                  
             
@@ -132,7 +133,7 @@ def process_img(device, model, processor, img_folder, img_path, img_out_folder, 
                 image_out = visualize(
                         os.path.join(img_folder, img_path),
                         COLORS,
-                        masks=np.array([(pcs_best_logits > 0.5)[0]]),
+                        masks=np.array([(pcs_best_logits_np > 0.5)[0]]),
                         scores=np.array([this_scores[0]]),
                         #points=[point_coords_sorted[0]]
                     )
