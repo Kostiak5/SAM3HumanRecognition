@@ -424,7 +424,6 @@ class SAM3InteractiveImagePredictor(nn.Module):
         )
 
         # Upscale the masks to the original image resolution
-        print("sam1_task_predictor/_predict mask shape before pprc", low_res_masks.shape)
 
         masks = self._transforms.postprocess_masks(
             low_res_masks, self._orig_hw[img_idx]
@@ -432,7 +431,6 @@ class SAM3InteractiveImagePredictor(nn.Module):
         low_res_masks = torch.clamp(low_res_masks, -32.0, 32.0)
         if not return_logits:
             masks = masks > self.mask_threshold
-        print("sam1_task_predictor/_predict mask shape after pprc", low_res_masks.shape, masks.shape)
         return masks, iou_predictions, low_res_masks
 
     def get_image_embedding(self) -> torch.Tensor:

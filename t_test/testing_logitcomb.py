@@ -120,7 +120,7 @@ def process_img(device, model, processor, img_folder, img_path, img_out_folder, 
             masks.append(best_mask_np[0])
             scores.append(this_scores[0])
             if args is not None and args.vis and base_state["masks"] is not None and len(base_state["masks"]) > 0:
-                print(base_state["masks"].cpu().detach().numpy().shape)
+                # print(base_state["masks"].cpu().detach().numpy().shape)
                 image_out = visualize(
                         os.path.join(img_folder, img_path),
                         COLORS,
@@ -193,7 +193,7 @@ def process_set(set_folder, set_out_folder=None, gt_folder=None, filename_to_id=
         
 
         for mask, score in zip(masks, scores):
-            print(mask.shape, score.shape)
+            # print(mask.shape, score.shape)
             if mask is not None and mask.any():
                 # Ensure mask is 2D and uint8
                 mask_np = np.squeeze(mask).astype(np.uint8)
