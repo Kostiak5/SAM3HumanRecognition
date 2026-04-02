@@ -89,13 +89,14 @@ def process_img(device, model, processor, img_folder, img_path, img_out_folder, 
                 multimask_output=False
             )
             if pvs_logits is not None and base_state["masks_logits"] is not None:
-                pcs_logits = base_state["masks_logits"].cpu().detach().numpy()
+                pcs_logits = base_state["masks_logits"]
                 resized_pvs_logits = F.interpolate(
                     pvs_logits.unsqueeze(0), 
                     size=(pcs_logits.shape[2], pcs_logits.shape[3]), 
                     mode='bilinear', 
                     align_corners=False
                 )
+                resized_pvs_logits = resized_pvs_logits.cpu().detach().numpy()
                 clamped_pvs_logits = np.clip(resized_pvs_logits, 0.0, 1.0)
                 squared_diff = (pcs_logits - clamped_pvs_logits) ** 2
     
