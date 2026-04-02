@@ -121,7 +121,6 @@ def process_set(set_folder, set_out_folder=None, gt_folder=None, filename_to_id=
     
     model = build_sam3_image_model(enable_inst_interactivity=True)
     model.to(device) 
-
     processor = Sam3Processor(model)
 
     i = 0

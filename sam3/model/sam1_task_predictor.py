@@ -24,8 +24,8 @@ class SAM3InteractiveImagePredictor(nn.Module):
         self,
         sam_model: Sam3TrackerBase,
         mask_threshold=0.0,
-        max_hole_area=256.0,
-        max_sprinkle_area=0.0,
+        max_hole_area=10.0, ## EDITED
+        max_sprinkle_area=50.0, ## EDITED
         **kwargs,
     ) -> None:
         """
