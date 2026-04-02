@@ -88,7 +88,8 @@ def process_img(device, model, processor, img_folder, img_path, img_out_folder, 
                 multimask_output=False
             )
             if this_logits is not None and base_state["masks_logits"] is not None:
-                print(np.max(this_logits), np.max(base_state["masks_logits"].cpu().detach().numpy())) 
+                print(np.max(this_logits), np.min(this_logits))
+                print(np.max(base_state["masks_logits"].cpu().detach().numpy()), np.min(base_state["masks_logits"].cpu().detach().numpy())) 
 
         if 'scores' in base_state and len(base_state['scores']) != 0:
             # this_masks = base_state["masks"].cpu().detach().numpy()
