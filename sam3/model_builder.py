@@ -293,6 +293,7 @@ def _create_sam3_model(
     dot_prod_scoring,
     inst_interactive_predictor,
     eval_mode,
+    multimask_output
 ):
     """Create the SAM3 image model."""
     common_params = {
@@ -563,6 +564,7 @@ def build_sam3_image_model(
     enable_segmentation=True,
     enable_inst_interactivity=False,
     compile=False,
+    multimask_output=True
 ):
     """
     Build SAM3 image model
@@ -624,6 +626,7 @@ def build_sam3_image_model(
         dot_prod_scoring,
         inst_predictor,
         eval_mode,
+        multimask_output
     )
     if load_from_HF and checkpoint_path is None:
         checkpoint_path = download_ckpt_from_hf()
