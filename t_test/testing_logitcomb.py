@@ -96,8 +96,8 @@ def process_img(device, model, processor, img_folder, img_path, img_out_folder, 
                     mode='bilinear', 
                     align_corners=False
                 )
-                clamped_pvs_logits = torch.clamp(resized_pvs_logits, 0.0, 1.0)
-                squared_diff = (pcs_logits - clamped_pvs_logits[0]) ** 2
+                clamped_pvs_logits = np.clip(resized_pvs_logits, 0.0, 1.0)
+                squared_diff = (pcs_logits - clamped_pvs_logits) ** 2
     
                 # 2. Average the error across Channels, Height, and Width
                 # axis=(-3, -2, -1) ensures we get one distance value per candidate
@@ -111,11 +111,7 @@ def process_img(device, model, processor, img_folder, img_path, img_out_folder, 
 
                 combined_logits = (clamped_pvs_logits[0] + pcs_best_logits) * 0.5
                 best_mask = combined_logits > 0.5
-                this_masks = best_mask
-
-            
-
-            
+                this_masks = best_mask                     
             
         if 'scores' in base_state and len(base_state['scores']) != 0:
             # this_masks = base_state["masks"].cpu().detach().numpy()
