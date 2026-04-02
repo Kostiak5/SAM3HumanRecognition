@@ -29,7 +29,7 @@ def process_img(device, model, processor, img_folder, img_path, img_out_folder, 
 
     masks = inference_state["masks"].detach().cpu().numpy()
     scores = inference_state["scores"].detach().cpu().to(torch.float32).numpy()
-    print(inference_state["masks"].shape)
+    # print(inference_state["masks"].shape)
     # Get the masks, bounding boxes, and scores
     # masks, scores = output["masks"], output["boxes"], output["scores"]
     logs.append([scores])
@@ -38,12 +38,12 @@ def process_img(device, model, processor, img_folder, img_path, img_out_folder, 
     if args is not None and args.vis:
         for i in range(masks.shape[0]):
             image_out = visualize(
-                    os.path.join(img_folder, img_path),
-                    COLORS,
-                    masks=masks[i],
-                    scores=scores[i]
+                os.path.join(img_folder, img_path),
+                COLORS,
+                masks=masks,
+                scores=scores
             )
-            cv2.imwrite(os.path.join(img_folder, f"{img_path}_{i}.jpg"), image_out)
+            cv2.imwrite(os.path.join(img_folder, img_path), image_out)
         logs.append(["Saved visualization: ", os.path.join(img_out_folder, img_path)])
     return logs, output
 
@@ -53,7 +53,7 @@ def process_set(set_folder, set_out_folder=None, gt_folder=None, filename_to_id=
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Loading model on: {device.type.upper()}")
     
-    model = build_sam3_image_model(enable_inst_interactivity=True, multimask_output = False)
+    model = build_sam3_image_model(enable_inst_interactivity=True, multimask_output = True)
     model.to(device) 
 
     processor = Sam3Processor(model)

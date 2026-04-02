@@ -236,7 +236,7 @@ class SAM3InteractiveImagePredictor(nn.Module):
         multimask_output: bool = True,
         return_logits: bool = False,
         normalize_coords=True,
-        hs_queries=None
+        hs_queries=None,
     ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
         """
         Predict masks for the given input prompts, using the currently set image.
@@ -289,7 +289,7 @@ class SAM3InteractiveImagePredictor(nn.Module):
             mask_input,
             multimask_output,
             return_logits=return_logits,
-            hs_queries=hs_queries
+            hs_queries=hs_queries,
         )
 
         masks_np = masks.squeeze(0).float().detach().cpu().numpy()
@@ -337,7 +337,7 @@ class SAM3InteractiveImagePredictor(nn.Module):
         multimask_output: bool = True,
         return_logits: bool = False,
         img_idx: int = -1,
-        hs_queries = None
+        hs_queries = None,
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """
         Predict masks for the given input prompts, using the currently set image.
@@ -424,13 +424,15 @@ class SAM3InteractiveImagePredictor(nn.Module):
         )
 
         # Upscale the masks to the original image resolution
+        print("sam1_task_predictor/_predict mask shape before pprc", low_res_masks.shape)
+
         masks = self._transforms.postprocess_masks(
             low_res_masks, self._orig_hw[img_idx]
         )
         low_res_masks = torch.clamp(low_res_masks, -32.0, 32.0)
         if not return_logits:
             masks = masks > self.mask_threshold
-
+        print("sam1_task_predictor/_predict mask shape after pprc", low_res_masks.shape, masks.shape)
         return masks, iou_predictions, low_res_masks
 
     def get_image_embedding(self) -> torch.Tensor:
