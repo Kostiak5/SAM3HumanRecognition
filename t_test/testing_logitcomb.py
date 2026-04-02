@@ -91,28 +91,24 @@ def process_img(device, model, processor, img_folder, img_path, img_out_folder, 
             if pvs_logits is not None and base_state["masks_logits"] is not None:
                 pcs_logits = base_state["masks_logits"]
                 resized_pvs_logits = F.interpolate(
-                    np.expand_dims(pvs_logits, axis=0), 
+                    pvs_logits.unsqueeze(0), 
                     size=(pcs_logits.shape[2], pcs_logits.shape[3]), 
                     mode='bilinear', 
                     align_corners=False
                 )
-                resized_pvs_logits = resized_pvs_logits.cpu().detach().numpy()
-                clamped_pvs_logits = np.clip(resized_pvs_logits, 0.0, 1.0)
+                clamped_pvs_logits = torch.clamp(resized_pvs_logits, 0.0, 1.0)
                 squared_diff = (pcs_logits - clamped_pvs_logits) ** 2
-    
-                # 2. Average the error across Channels, Height, and Width
-                # axis=(-3, -2, -1) ensures we get one distance value per candidate
-                mse_distances = np.mean(squared_diff, axis=(-3, -2, -1))
+ 
+                # Average across C, H, W (dims -3, -2, -1)
+                mse_distances = squared_diff.mean(dim=(-3, -2, -1)) 
                 
-                # 3. Find the index of the minimum distance
-                closest_idx = np.argmin(mse_distances)
-
+                # Find best index
+                closest_idx = mse_distances.argmin().item()
                 pcs_best_logits = pcs_logits[closest_idx]
-                print(pcs_best_logits.shape)
 
                 combined_logits = (clamped_pvs_logits[0] + pcs_best_logits) * 0.5
                 best_mask = combined_logits > 0.5
-                this_masks = best_mask                     
+                this_masks = best_mask.cpu().detach().numpy()                  
             
         if 'scores' in base_state and len(base_state['scores']) != 0:
             # this_masks = base_state["masks"].cpu().detach().numpy()
