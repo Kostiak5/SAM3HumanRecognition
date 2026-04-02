@@ -110,7 +110,7 @@ def process_img(device, model, processor, img_folder, img_path, img_out_folder, 
 
                 combined_logits = (sigmoid_pvs_logits[0] + pcs_best_logits) * 0.5
                 best_mask = combined_logits > 0.5
-                this_masks = best_mask.cpu().detach().numpy()                  
+                best_mask_np = best_mask.cpu().detach().numpy()                  
             
         if 'scores' in base_state and len(base_state['scores']) != 0:
             # this_masks = base_state["masks"].cpu().detach().numpy()
@@ -125,9 +125,27 @@ def process_img(device, model, processor, img_folder, img_path, img_out_folder, 
                         COLORS,
                         masks=np.array([this_masks[0]]),
                         scores=np.array([this_scores[0]]),
-                        points=[point_coords_sorted[0]]
+                        points=point_coords_sorted[:n_kpts]
                     )
-                cv2.imwrite(os.path.join(img_out_folder, f"{img_path}_{idx}.jpg"), image_out)
+                cv2.imwrite(os.path.join(img_out_folder, f"{img_path}_{idx}_pvs.jpg"), image_out)
+               
+                image_out = visualize(
+                        os.path.join(img_folder, img_path),
+                        COLORS,
+                        masks=np.array([(pcs_best_logits > 0.5)[0]]),
+                        scores=np.array([this_scores[0]]),
+                        #points=[point_coords_sorted[0]]
+                    )
+                cv2.imwrite(os.path.join(img_out_folder, f"{img_path}_{idx}_pcs.jpg"), image_out)
+
+                image_out = visualize(
+                        os.path.join(img_folder, img_path),
+                        COLORS,
+                        masks=np.array([best_mask_np[0]]),
+                        scores=np.array([this_scores[0]]),
+                        #points=[point_coords_sorted[0]]
+                    )
+                cv2.imwrite(os.path.join(img_out_folder, f"{img_path}_{idx}_comb.jpg"), image_out)
                 logs.append(["Saved visualization: ", os.path.join(img_out_folder, img_path)])
 
     
