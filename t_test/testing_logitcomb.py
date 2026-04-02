@@ -1,4 +1,5 @@
 import torch
+import torch.nn.functional as F
 import os
 import cv2
 import numpy as np
@@ -81,16 +82,41 @@ def process_img(device, model, processor, img_folder, img_path, img_out_folder, 
             #             points=point_coords_sorted[:(i+1)]
             #         )
             # cv2.imwrite(os.path.join(img_out_folder, f"{img_path}_{idx}_{i}.jpg"), image_out)
-            this_masks, this_scores, this_logits = model.predict_inst(
+            this_masks, this_scores, pvs_logits = model.predict_inst(
                 inference_state,
                 point_coords=point_coords_sorted[:n_kpts],
                 point_labels=np.ones_like(point_visibility_sorted[:n_kpts]),
                 multimask_output=False
             )
-            if this_logits is not None and base_state["masks_logits"] is not None:
-                print(np.max(this_logits), np.min(this_logits))
-                print(np.max(base_state["masks_logits"].cpu().detach().numpy()), np.min(base_state["masks_logits"].cpu().detach().numpy())) 
+            if pvs_logits is not None and base_state["masks_logits"] is not None:
+                pcs_logits = base_state["masks_logits"].cpu().detach().numpy()
+                resized_pvs_logits = F.interpolate(
+                    pvs_logits.unsqueeze(0), 
+                    size=(pcs_logits.shape[2], pcs_logits.shape[3]), 
+                    mode='bilinear', 
+                    align_corners=False
+                )
+                clamped_pvs_logits = torch.clamp(resized_pvs_logits, 0.0, 1.0)
+                squared_diff = (pcs_logits - clamped_pvs_logits[0]) ** 2
+    
+                # 2. Average the error across Channels, Height, and Width
+                # axis=(-3, -2, -1) ensures we get one distance value per candidate
+                mse_distances = np.mean(squared_diff, axis=(-3, -2, -1))
+                
+                # 3. Find the index of the minimum distance
+                closest_idx = np.argmin(mse_distances)
 
+                pcs_best_logits = pcs_logits[closest_idx]
+                print(pcs_best_logits.shape)
+
+                combined_logits = (clamped_pvs_logits[0] + pcs_best_logits) * 0.5
+                best_mask = combined_logits > 0.5
+                this_masks = best_mask
+
+            
+
+            
+            
         if 'scores' in base_state and len(base_state['scores']) != 0:
             # this_masks = base_state["masks"].cpu().detach().numpy()
             # this_scores = base_state["scores"].cpu().detach().to(torch.float32).numpy()
