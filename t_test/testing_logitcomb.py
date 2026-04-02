@@ -117,7 +117,7 @@ def process_img(device, model, processor, img_folder, img_path, img_out_folder, 
             # this_masks = base_state["masks"].cpu().detach().numpy()
             # this_scores = base_state["scores"].cpu().detach().to(torch.float32).numpy()
             # max_score_mask = np.argmax(this_scores)
-            masks.append(this_masks[0])
+            masks.append(best_mask_np[0])
             scores.append(this_scores[0])
             if args is not None and args.vis and base_state["masks"] is not None and len(base_state["masks"]) > 0:
                 print(base_state["masks"].cpu().detach().numpy().shape)
