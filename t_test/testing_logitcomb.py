@@ -91,7 +91,7 @@ def process_img(device, model, processor, img_folder, img_path, img_out_folder, 
             if pvs_logits is not None and base_state["masks_logits"] is not None:
                 pcs_logits = base_state["masks_logits"]
                 resized_pvs_logits = F.interpolate(
-                    pvs_logits.unsqueeze(0), 
+                    np.expand_dims(pvs_logits, axis=0), 
                     size=(pcs_logits.shape[2], pcs_logits.shape[3]), 
                     mode='bilinear', 
                     align_corners=False
