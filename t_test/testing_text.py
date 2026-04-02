@@ -21,7 +21,7 @@ def process_img(device, model, processor, img_folder, img_path, img_out_folder, 
     logs.append("Start processing")
     image = Image.open(os.path.join(img_folder, img_path))
     inference_state = processor.set_image(image)
-    inference_state = processor.set_text_prompt(state=inference_state, prompt=text_prompt, multimask_output=True)
+    inference_state = processor.set_text_prompt(state=inference_state, prompt=text_prompt)
     # Prompt the model with text
     logs.append("Image set")
 
@@ -36,7 +36,7 @@ def process_img(device, model, processor, img_folder, img_path, img_out_folder, 
     output = [masks, scores]
     print(masks.shape, scores.shape)
     if args is not None and args.vis:
-        for i in range(3):
+        for i in range(masks.shape[0]):
             image_out = visualize(
                     os.path.join(img_folder, img_path),
                     COLORS,
@@ -53,7 +53,7 @@ def process_set(set_folder, set_out_folder=None, gt_folder=None, filename_to_id=
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Loading model on: {device.type.upper()}")
     
-    model = build_sam3_image_model(enable_inst_interactivity=True)
+    model = build_sam3_image_model(enable_inst_interactivity=True, multimask_output = True)
     model.to(device) 
 
     processor = Sam3Processor(model)
