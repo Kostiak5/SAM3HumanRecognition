@@ -152,7 +152,7 @@ def process_set(set_folder, set_out_folder=None, gt_folder=None, filename_to_id=
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Loading model on: {device.type.upper()}")
     
-    predicto = build_sam3_video_predictor(gpus_to_use=torch.cuda.current_device())
+    predicto = build_sam3_video_predictor(gpus_to_use=[torch.cuda.current_device()])
 
     i = 0
     for img_path in tqdm(os.listdir(set_folder)):
