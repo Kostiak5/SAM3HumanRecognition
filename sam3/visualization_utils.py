@@ -326,6 +326,8 @@ def visualize_formatted_frame_output(
                 if hasattr(binary_mask, "sum")
                 else np.sum(binary_mask)
             )
+            print(f"bin_mask: {binary_mask}")
+            print(f"mask_sum: {mask_sum}")
 
             if mask_sum > 0:  # Only draw if mask has content
                 # Convert to torch tensor if it's not already
@@ -384,9 +386,9 @@ def visualize_formatted_frame_output(
 
     plt.tight_layout()
     if output_path is None:
-        plt.savefig(output_path, bbox_inches='tight', dpi=150) ## EDITED
+        plt.show()
     else:
-        plt.show() 
+        plt.savefig(output_path, bbox_inches='tight', dpi=150) ## EDITED
 
 
 def render_masklet_frame(img, outputs, frame_idx=None, alpha=0.5):

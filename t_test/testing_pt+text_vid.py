@@ -54,7 +54,7 @@ def abs_to_rel_coords(coords, IMG_WIDTH, IMG_HEIGHT, coord_type="point"):
     else:
         raise ValueError(f"Unknown coord_type: {coord_type}")
 
-def process_img(device, predictor, img_folder, img_path, img_out_folder, pose_kpts_arr, bbox_arr, text_prompt="human", args=None):
+def process_img(device, predictor, img_folder, img_path, img_out_folder, pose_kpts_arr, bbox_arr, text_prompt="person", args=None):
     logs = []
 
     # Load an image
@@ -88,7 +88,7 @@ def process_img(device, predictor, img_folder, img_path, img_out_folder, pose_kp
         output_path=os.path.join(img_out_folder, f"{img_path}_0.jpg")
     )
 
-    print("out: {out}")
+    print(f"out: {out}")
 
     n_kpts = args.n_kpts
     masks = []

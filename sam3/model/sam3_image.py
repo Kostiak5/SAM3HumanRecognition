@@ -817,6 +817,7 @@ class Sam3ImageOnVideoMultiGPU(Sam3Image):
                 find_target=None,
                 geometric_prompt=geometric_prompt,
             )
+            out_local = out_local[0]
         if run_nms:
             with torch.profiler.record_function("nms_masks"):
                 # run NMS as a post-processing step on top of the detection outputs
