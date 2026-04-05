@@ -61,7 +61,7 @@ def process_img(device, predictor, img_folder, img_path, img_out_folder, pose_kp
     logs.append("Start processing")
     image = Image.open(os.path.join(img_folder, img_path))
     imgw, imgh = image.size
-    response = predictor.handle_request(
+    _ = predictor.handle_request(
         request=dict(
             type="start_session",
             resource_path=os.path.join(img_folder, img_path),
