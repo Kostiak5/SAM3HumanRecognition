@@ -12,25 +12,28 @@ from t_test.testing_utils import determine_folders, parse_args, generate_colors,
 import copy
 import argparse
 import os
+from sam3.visualization_utils import (
+    load_frame,
+    prepare_masks_for_visualization,
+    visualize_formatted_frame_output,
+)
 COLORS = generate_colors(50)
 
-def assign_mask_to_kpts(masks, kpts):
+def assign_mask_to_kpts(mask, kpts):
     mask_i = -1
-    for i, mask in enumerate(masks):
-        n_kpts_inside_mask = 0
-        for kpt in kpts:
-            if 0 < round(kpt[1]) < mask.shape[0] and 0 < round(kpt[0]) < mask.shape[1] and mask[round(kpt[1])][round(kpt[0])] == 1:
-                n_kpts_inside_mask += 1
+    n_kpts_inside_mask = 0
+    for kpt in kpts:
+        if 0 < round(kpt[1]) < mask.shape[0] and 0 < round(kpt[0]) < mask.shape[1] and mask[round(kpt[1])][round(kpt[0])] == 1:
+            n_kpts_inside_mask += 1
 
-                if n_kpts_inside_mask >= 4:
-                    print("Found")
-                    break
-        if n_kpts_inside_mask >= 4:
-            print("Found later")
-            return i
-        elif n_kpts_inside_mask > 0:
-            mask_i = i
-    print("Not found:", mask_i)
+            if n_kpts_inside_mask >= 4:
+                print("Found")
+                break
+    if n_kpts_inside_mask >= 4:
+        print("Found later")
+        return i
+    elif n_kpts_inside_mask > 0:
+        mask_i = i
     return mask_i
     
 def abs_to_rel_coords(coords, IMG_WIDTH, IMG_HEIGHT, coord_type="point"):
@@ -60,96 +63,79 @@ def process_img(device, predictor, img_folder, img_path, img_out_folder, pose_kp
     response = predictor.handle_request(
         request=dict(
             type="start_session",
-            resource_path=img_path,
+            resource_path=os.path.join(img_folder, img_path),
         )
     )
     session_id = response["session_id"]
-    inference_state = processor.set_image(image)
-    # inference_state = processor.set_text_prompt(state=inference_state, prompt=text_prompt)
-    # Prompt the model with text
-    logs.append("Image set")
+    frame_idx = 0
+    response = predictor.handle_request(
+        request=dict(
+            type="add_prompt",
+            session_id=session_id,
+            frame_index=frame_idx,
+            text=text_prompt,
+        )
+    )
+    out = response["outputs"]
+
+    visualize_formatted_frame_output(
+        frame_idx,
+        [os.path.join(img_folder, img_path)],
+        outputs_list=[prepare_masks_for_visualization({frame_idx: out})],
+        titles=["SAM 3 Dense Tracking outputs"],
+        figsize=(6, 4),
+        output_path=os.path.join(img_out_folder, f"{img_path}_0.jpg")
+    )
+
+    print("out: {out}")
 
     n_kpts = args.n_kpts
     masks = []
     scores = []
     
-    base_gl_state = copy.deepcopy(inference_state)
-
     for idx, (pose_kpts, bbox) in enumerate(zip(pose_kpts_arr, bbox_arr)):
         all_point_coords = []    
         # print(pose_kpts[:, :2][:n_kpts], pose_kpts[:, 2][:n_kpts])
-        base_state = copy.deepcopy(base_gl_state)
-        point_coords = pose_kpts[:, :2]
-        point_visibility = pose_kpts[:, 2]
-        point_coords_sorted, point_visibility_sorted, _ = select_keypoints(0.5, point_coords, point_visibility, method="distance+confidence")
-        if point_visibility_sorted is None or len(point_visibility_sorted) == 0:
-            continue
-        
+        # base_state = copy.deepcopy(base_gl_state)
+        # point_coords = pose_kpts[:, :2]
+        # point_visibility = pose_kpts[:, 2]
+        # point_coords_sorted, point_visibility_sorted, _ = select_keypoints(0.5, point_coords, point_visibility, method="distance+confidence")
+        # if point_visibility_sorted is None or len(point_visibility_sorted) == 0:
+        #     continue
 
 
-        prompt_text_str = "person"
-        frame_idx = 0  # add a text prompt on frame 0
-        response = predictor.handle_request(
-            request=dict(
-                type="add_prompt",
-                session_id=session_id,
-                frame_index=frame_idx,
-                text=text_prompt,
-            )
-        )
-        for i in range(1):
-            points_tensor = torch.tensor(
-                abs_to_rel_coords(point_coords_sorted[:n_kpts], imgw, imgh, coord_type="point"),
-                dtype=torch.float32,
-            )
-            points_labels_tensor = torch.ones(n_kpts, dtype=torch.int32)
-
-            response = predictor.handle_request(
-                request=dict(
-                    type="add_prompt",
-                    session_id=session_id,
-                    frame_index=frame_idx,
-                    points=points_tensor,
-                    point_labels=points_labels_tensor,
-                    obj_id=obj_id,
-                )
-            )
-            base_state = predictor.add_point_prompt(state=base_state, point=normalized_pt[i], label=1)
-            # point_coords_cropped = point_coords_sorted[:(i+1)]
-            # if len(point_coords_cropped.shape) < 2:
-            #     point_coords_cropped = [point_coords_cropped]
-            # image_out = visualize(
-            #             os.path.join(img_folder, img_path),
-            #             COLORS,
-            #             masks=base_state["masks"].cpu().detach().numpy(),
-            #             scores=base_state["scores"].cpu().detach().to(torch.float32).numpy(),
-            #             points=point_coords_sorted[:(i+1)]
-            #         )
-            # cv2.imwrite(os.path.join(img_out_folder, f"{img_path}_{idx}_{i}.jpg"), image_out)
-            this_masks, this_scores, this_logits = model.predict_inst(
-            inference_state,
-            point_coords=point_coords_sorted[:n_kpts],
-            point_labels=np.ones_like(point_visibility_sorted[:n_kpts]),
-            multimask_output=False,
-            )
-
-        if 'scores' in base_state and len(base_state['scores']) != 0:
-            # this_masks = base_state["masks"].cpu().detach().numpy()
-            # this_scores = base_state["scores"].cpu().detach().to(torch.float32).numpy()
-            # max_score_mask = np.argmax(this_scores)
-            masks.append(this_masks[0])
-            scores.append(this_scores[0])
-            if args is not None and args.vis and base_state["masks"] is not None and len(base_state["masks"]) > 0:
-                print(base_state["masks"].cpu().detach().numpy().shape)
-                image_out = visualize(
-                        os.path.join(img_folder, img_path),
-                        COLORS,
-                        masks=np.array([this_masks[0]]),
-                        scores=np.array([this_scores[0]]),
-                        points=[point_coords_sorted[0]]
-                    )
-                cv2.imwrite(os.path.join(img_out_folder, f"{img_path}_{idx}.jpg"), image_out)
-                logs.append(["Saved visualization: ", os.path.join(img_out_folder, img_path)])
+        # points_tensor = torch.tensor(
+        #     abs_to_rel_coords(point_coords_sorted[:n_kpts], imgw, imgh, coord_type="point"),
+        #     dtype=torch.float32,
+        # )
+        points_labels_tensor = torch.ones(n_kpts, dtype=torch.int32)
+        # response = predictor.handle_request(
+        #     request=dict(
+        #         type="add_prompt",
+        #         session_id=session_id,
+        #         frame_index=frame_idx,
+        #         points=points_tensor,
+        #         point_labels=points_labels_tensor,
+        #         obj_id=obj_id,
+        #     )
+        # )
+        # if 'scores' in base_state and len(base_state['scores']) != 0:
+        #     # this_masks = base_state["masks"].cpu().detach().numpy()
+        #     # this_scores = base_state["scores"].cpu().detach().to(torch.float32).numpy()
+        #     # max_score_mask = np.argmax(this_scores)
+        #     masks.append(this_masks[0])
+        #     scores.append(this_scores[0])
+        #     if args is not None and args.vis and base_state["masks"] is not None and len(base_state["masks"]) > 0:
+        #         print(base_state["masks"].cpu().detach().numpy().shape)
+        #         image_out = visualize(
+        #                 os.path.join(img_folder, img_path),
+        #                 COLORS,
+        #                 masks=np.array([this_masks[0]]),
+        #                 scores=np.array([this_scores[0]]),
+        #                 points=[point_coords_sorted[0]]
+        #             )
+        #         cv2.imwrite(os.path.join(img_out_folder, f"{img_path}_{idx}.jpg"), image_out)
+        #         logs.append(["Saved visualization: ", os.path.join(img_out_folder, img_path)])
 
     
     # Get the masks, bounding boxes, and scores

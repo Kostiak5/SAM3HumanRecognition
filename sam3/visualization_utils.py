@@ -212,6 +212,7 @@ def visualize_formatted_frame_output(
     figsize=(12, 8),
     title_suffix="",
     prompt_info=None,
+    output_path=None
 ):
     """Visualize up to three sets of segmentation masks on a video frame.
 
@@ -382,7 +383,10 @@ def visualize_formatted_frame_output(
         ax.axis("off")
 
     plt.tight_layout()
-    plt.show()
+    if output_path is None:
+        plt.savefig(output_path, bbox_inches='tight', dpi=150) ## EDITED
+    else:
+        plt.show() 
 
 
 def render_masklet_frame(img, outputs, frame_idx=None, alpha=0.5):
