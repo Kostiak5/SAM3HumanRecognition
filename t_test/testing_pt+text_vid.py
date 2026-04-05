@@ -6,6 +6,7 @@ import json
 from PIL import Image
 from sam3.model_builder import build_sam3_image_model
 from sam3.model.sam3_image_processor import Sam3Processor
+from sam3.model_builder import build_sam3_video_predictor
 import pycocotools.mask as mask_util
 from tqdm import tqdm
 from t_test.testing_utils import determine_folders, parse_args, generate_colors, eval_set, visualize, select_keypoints, load_pts, load_ids, load_pts_bboxes, compress_logits
