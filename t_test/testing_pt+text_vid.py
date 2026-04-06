@@ -25,16 +25,13 @@ def assign_mask_to_kpts(masks, kpts):
     mask_i = -1
     n_kpts_inside_mask = 0
     for mask_i, mask in enumerate(masks):
-        print(f"Assigning: {mask.sum()} vs {kpts}")
         for kpt in kpts:
             if 0 < round(kpt[1]) < mask.shape[0] and 0 < round(kpt[0]) < mask.shape[1] and mask[round(kpt[1])][round(kpt[0])] == 1:
                 n_kpts_inside_mask += 1
 
                 if n_kpts_inside_mask >= 3:
-                    print("Found", mask_i)
                     return mask_i
 
-    print("Not found")
 
     return -1
     
@@ -164,7 +161,6 @@ def process_img(device, predictor, img_folder, img_path, img_out_folder, instanc
     final_masks = response["outputs"]['out_binary_masks']
     final_scores = response["outputs"]['out_probs']
     logs.append([scores])
-    print(f"final scores: {final_scores}")
     output = [final_masks, final_scores]
 
     _ = predictor.handle_request(
@@ -209,7 +205,6 @@ def process_set(set_folder, set_out_folder=None, gt_folder=None, filename_to_id=
         
 
         for mask, score in zip(masks, scores):
-            print(mask.shape, score.shape)
             if mask is not None and mask.any():
                 # Ensure mask is 2D and uint8
                 mask_np = np.squeeze(mask).astype(np.uint8)
