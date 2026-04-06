@@ -221,7 +221,7 @@ def process_set(set_folder, set_out_folder=None, gt_folder=None, filename_to_id=
                     rle['counts'] = rle['counts'].decode('utf-8')
                 eval_arr.append({
                     "segmentation": rle,
-                    # "score": float(score),
+                    "score": float(score),
                     "image_id": int(img_id),
                     "category_id": 1
                 })
