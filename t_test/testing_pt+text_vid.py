@@ -164,6 +164,7 @@ def process_img(device, predictor, img_folder, img_path, img_out_folder, instanc
     final_masks = response["outputs"]['out_binary_masks']
     final_scores = response["outputs"]['out_probs']
     logs.append([scores])
+    print(f"final scores: {final_scores}")
     output = [final_masks, final_scores]
 
     _ = predictor.handle_request(
