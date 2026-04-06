@@ -78,15 +78,15 @@ def process_img(device, predictor, img_folder, img_path, img_out_folder, instanc
         )
     )
     out = response["outputs"]
-
-    visualize_formatted_frame_output(
-        frame_idx,
-        [os.path.join(img_folder, img_path)],
-        outputs_list=[prepare_masks_for_visualization({frame_idx: out})],
-        titles=["SAM 3 Dense Tracking outputs"],
-        figsize=(6, 4),
-        output_path=os.path.join(img_out_folder, f"{img_path}_text.jpg")
-    )
+    if args.vis and args.vis_folder is not None:
+        visualize_formatted_frame_output(
+            frame_idx,
+            [os.path.join(img_folder, img_path)],
+            outputs_list=[prepare_masks_for_visualization({frame_idx: out})],
+            titles=["SAM 3 Dense Tracking outputs"],
+            figsize=(6, 4),
+            output_path=os.path.join(img_out_folder, f"{img_path}_text.jpg")
+        )
 
     # print(f"out keys: {out}")
     n_kpts = args.n_kpts
@@ -124,7 +124,7 @@ def process_img(device, predictor, img_folder, img_path, img_out_folder, instanc
                     point_labels=points_labels_tensor,
                     obj_id=obj_id,
                 )
-            )
+            ) 
 
             if inst_id >= 0:
                 new_out = response["outputs"]
@@ -187,8 +187,8 @@ def process_set(set_folder, set_out_folder=None, gt_folder=None, filename_to_id=
     i = 0
     for img_path in tqdm(os.listdir(set_folder)):
         i += 1
-        if i == 100:
-            break
+        if i < 1440:
+            continue
 
         if img_path[-3:] != "jpg":
             continue
