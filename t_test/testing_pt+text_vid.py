@@ -141,6 +141,7 @@ def process_img(device, predictor, img_folder, img_path, img_out_folder, instanc
                 )
             )
             n_objs += 1
+            print("added new obj")
         if args.vis and args.vis_folder is not None:
             visualize_formatted_frame_output(
                 frame_idx,
