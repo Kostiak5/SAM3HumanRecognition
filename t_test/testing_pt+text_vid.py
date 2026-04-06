@@ -165,6 +165,13 @@ def process_img(device, predictor, img_folder, img_path, img_out_folder, instanc
     final_scores = response["outputs"]['out_probs']
     logs.append([scores])
     output = [final_masks, final_scores]
+
+    _ = predictor.handle_request(
+        request=dict(
+            type="close_session",
+            session_id=session_id,
+        )
+    )
     return logs, output
 
 
