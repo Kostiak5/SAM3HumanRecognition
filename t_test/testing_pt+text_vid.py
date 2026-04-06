@@ -27,14 +27,12 @@ def assign_mask_to_kpts(mask, kpts):
         if 0 < round(kpt[1]) < mask.shape[0] and 0 < round(kpt[0]) < mask.shape[1] and mask[round(kpt[1])][round(kpt[0])] == 1:
             n_kpts_inside_mask += 1
 
-            if n_kpts_inside_mask >= 4:
+            if n_kpts_inside_mask >= 3:
                 print("Found")
                 break
-    if n_kpts_inside_mask >= 4:
-        print("Found later")
-        return i
-    elif n_kpts_inside_mask > 0:
-        mask_i = i
+    if mask_i == -1:
+        print("Not found")
+
     return mask_i
     
 def abs_to_rel_coords(coords, IMG_WIDTH, IMG_HEIGHT, coord_type="point"):
@@ -85,7 +83,7 @@ def process_img(device, predictor, img_folder, img_path, img_out_folder, pose_kp
         outputs_list=[prepare_masks_for_visualization({frame_idx: out})],
         titles=["SAM 3 Dense Tracking outputs"],
         figsize=(6, 4),
-        output_path=os.path.join(img_out_folder, f"{img_path}_0.jpg")
+        output_path=os.path.join(img_out_folder, f"{img_path}_text.jpg")
     )
 
     print(f"out: {out}")
@@ -98,28 +96,38 @@ def process_img(device, predictor, img_folder, img_path, img_out_folder, pose_kp
         all_point_coords = []    
         # print(pose_kpts[:, :2][:n_kpts], pose_kpts[:, 2][:n_kpts])
         # base_state = copy.deepcopy(base_gl_state)
-        # point_coords = pose_kpts[:, :2]
-        # point_visibility = pose_kpts[:, 2]
-        # point_coords_sorted, point_visibility_sorted, _ = select_keypoints(0.5, point_coords, point_visibility, method="distance+confidence")
-        # if point_visibility_sorted is None or len(point_visibility_sorted) == 0:
-        #     continue
+        point_coords = pose_kpts[:, :2]
+        point_visibility = pose_kpts[:, 2]
+        point_coords_sorted, point_visibility_sorted, _ = select_keypoints(0.5, point_coords, point_visibility, method="distance+confidence")
+        if point_visibility_sorted is None or len(point_visibility_sorted) == 0:
+            continue
 
 
-        # points_tensor = torch.tensor(
-        #     abs_to_rel_coords(point_coords_sorted[:n_kpts], imgw, imgh, coord_type="point"),
-        #     dtype=torch.float32,
-        # )
+        points_tensor = torch.tensor(
+            abs_to_rel_coords(point_coords_sorted[:n_kpts], imgw, imgh, coord_type="point"),
+            dtype=torch.float32,
+        )
         points_labels_tensor = torch.ones(n_kpts, dtype=torch.int32)
-        # response = predictor.handle_request(
-        #     request=dict(
-        #         type="add_prompt",
-        #         session_id=session_id,
-        #         frame_index=frame_idx,
-        #         points=points_tensor,
-        #         point_labels=points_labels_tensor,
-        #         obj_id=obj_id,
-        #     )
-        # )
+        obj_id = assign_mask_to_kpts(out['out_binary_masks'], point_coords_sorted[:n_kpts])
+        response = predictor.handle_request(
+            request=dict(
+                type="add_prompt",
+                session_id=session_id,
+                frame_index=frame_idx,
+                points=points_tensor,
+                point_labels=points_labels_tensor,
+                obj_id=obj_id,
+            )
+        )
+
+        visualize_formatted_frame_output(
+            frame_idx,
+            [os.path.join(img_folder, img_path)],
+            outputs_list=[prepare_masks_for_visualization({frame_idx: out})],
+            titles=["SAM 3 Dense Tracking outputs"],
+            figsize=(6, 4),
+            output_path=os.path.join(img_out_folder, f"{img_path}_{idx}.jpg")
+        )
         # if 'scores' in base_state and len(base_state['scores']) != 0:
         #     # this_masks = base_state["masks"].cpu().detach().numpy()
         #     # this_scores = base_state["scores"].cpu().detach().to(torch.float32).numpy()
