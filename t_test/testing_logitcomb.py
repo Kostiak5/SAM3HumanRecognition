@@ -36,9 +36,12 @@ def assign_mask_to_kpts(masks, kpts):
     
     
 
-def process_img(device, model, processor, img_folder, img_path, img_out_folder, pose_kpts_arr, bbox_arr, text_prompt="person", args=None):
+def process_img(device, model, processor, img_folder, img_path, img_out_folder, instance_arr, text_prompt="person", args=None):
     logs = []
-
+    pose_kpts_arr = instance_arr['keypoints']
+    bbox_arr = instance_arr['bbox']
+    if 'id' in instance_arr:
+        inst_id = instance_arr['id']
     # Load an image
     logs.append("Start processing")
     image = Image.open(os.path.join(img_folder, img_path))
@@ -157,7 +160,7 @@ def process_img(device, model, processor, img_folder, img_path, img_out_folder, 
     return logs, output
 
 
-def process_set(set_folder, set_out_folder=None, gt_folder=None, filename_to_id=None, id_to_kpts=None, id_to_bboxes=None, args=None):
+def process_set(set_folder, set_out_folder=None, gt_folder=None, filename_to_id=None, id_to_instance=None, args=None):
     eval_arr = []
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -185,7 +188,7 @@ def process_set(set_folder, set_out_folder=None, gt_folder=None, filename_to_id=
             else:
                 continue
 
-        _, output = process_img(device, model, processor, set_folder, img_path, set_out_folder, id_to_kpts[img_id], id_to_bboxes[img_id], args=args)
+        _, output = process_img(device, model, processor, set_folder, img_path, set_out_folder, id_to_instance[img_id], args=args)
         masks, scores = output
         # print(img_path, len(masks))
         if len(masks) == 0:
@@ -218,7 +221,7 @@ if __name__=="__main__":
     IMG_OUT_FOLDER = "t_test/test_images_out"
     args = parse_args()
     SET_FOLDER, SET_OUT_FOLDER, GT_FOLDER, KPTS_FOLDER = determine_folders(args)
-    filename_to_id, id_to_kpts = load_ids(KPTS_FOLDER)
-    id_to_kpts, id_to_bboxes = load_pts_bboxes(KPTS_FOLDER, id_to_kpts)
+    filename_to_id, id_to_instance = load_ids(KPTS_FOLDER)
+    id_to_instance = load_pts_bboxes(KPTS_FOLDER, id_to_instance)
 
-    process_set(SET_FOLDER, SET_OUT_FOLDER, GT_FOLDER, filename_to_id, id_to_kpts, id_to_bboxes, args)
+    process_set(SET_FOLDER, SET_OUT_FOLDER, GT_FOLDER, filename_to_id, id_to_instance, args)

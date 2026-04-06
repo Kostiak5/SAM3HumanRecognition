@@ -18,6 +18,7 @@ from sam3.visualization_utils import (
     prepare_masks_for_visualization,
     visualize_formatted_frame_output,
 )
+from t_test.compare_to_gt import GT
 COLORS = generate_colors(50)
 
 def assign_mask_to_kpts(masks, kpts):
@@ -54,9 +55,13 @@ def abs_to_rel_coords(coords, IMG_WIDTH, IMG_HEIGHT, coord_type="point"):
     else:
         raise ValueError(f"Unknown coord_type: {coord_type}")
 
-def process_img(device, predictor, img_folder, img_path, img_out_folder, pose_kpts_arr, bbox_arr, text_prompt="person", args=None):
+def process_img(device, predictor, img_folder, img_path, img_out_folder, instance_arr, text_prompt="person", args=None):
     logs = []
-
+    pose_kpts_arr = instance_arr['keypoints']
+    bbox_arr = instance_arr['bbox']
+    inst_id = -1
+    if 'id' in instance_arr:
+        inst_id = instance_arr['id']
     # Load an image
     logs.append("Start processing")
     image = Image.open(os.path.join(img_folder, img_path))
@@ -122,6 +127,11 @@ def process_img(device, predictor, img_folder, img_path, img_out_folder, pose_kp
                 )
             )
 
+            if inst_id >= 0:
+                new_out = response["outputs"]
+                print(f"IoU w text only: {GT_EVALUATOR.iou_to_gt(inst_id, out['bin_masks'][obj_id])}")
+                print(f"IoU w text+pt: {GT_EVALUATOR.iou_to_gt(inst_id, new_out['bin_masks'][obj_id])}")
+
         visualize_formatted_frame_output(
             frame_idx,
             [os.path.join(img_folder, img_path)],
@@ -156,9 +166,9 @@ def process_img(device, predictor, img_folder, img_path, img_out_folder, pose_kp
     return logs, output
 
 
-def process_set(set_folder, set_out_folder=None, gt_folder=None, filename_to_id=None, id_to_kpts=None, id_to_bboxes=None, args=None):
+def process_set(set_folder, set_out_folder=None, gt_folder=None, filename_to_id=None, id_to_instance=None, args=None):
     eval_arr = []
-
+    
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Loading model on: {device.type.upper()}")
     
@@ -181,7 +191,7 @@ def process_set(set_folder, set_out_folder=None, gt_folder=None, filename_to_id=
             else:
                 continue
 
-        _, output = process_img(device, predictor, set_folder, img_path, set_out_folder, id_to_kpts[img_id], id_to_bboxes[img_id], args=args)
+        _, output = process_img(device, predictor, set_folder, img_path, set_out_folder, id_to_instance[img_id], args=args)
         masks, scores = output
         # print(img_path, len(masks))
         if len(masks) == 0:
@@ -206,7 +216,7 @@ def process_set(set_folder, set_out_folder=None, gt_folder=None, filename_to_id=
                     "category_id": 1
                 })
     
-    eval_set(eval_arr, gt_folder)
+    GT_EVALUATOR.eval_set(eval_arr)
 
 if __name__=="__main__":
     IMG_FOLDER = "t_test/test_images"
@@ -214,7 +224,7 @@ if __name__=="__main__":
     IMG_OUT_FOLDER = "t_test/test_images_out"
     args = parse_args()
     SET_FOLDER, SET_OUT_FOLDER, GT_FOLDER, KPTS_FOLDER = determine_folders(args)
-    filename_to_id, id_to_kpts = load_ids(KPTS_FOLDER)
-    id_to_kpts, id_to_bboxes = load_pts_bboxes(KPTS_FOLDER, id_to_kpts)
-
-    process_set(SET_FOLDER, SET_OUT_FOLDER, GT_FOLDER, filename_to_id, id_to_kpts, id_to_bboxes, args)
+    filename_to_id, id_to_instance = load_ids(KPTS_FOLDER)
+    id_to_instance = load_pts_bboxes(KPTS_FOLDER, id_to_instance)
+    GT_EVALUATOR = GT(GT_FOLDER)
+    process_set(SET_FOLDER, SET_OUT_FOLDER, GT_FOLDER, filename_to_id, id_to_instance, args)

@@ -197,6 +197,11 @@ def determine_folders(args):
     else:
         base = "../sam2.1/sam2"
         base_out = "../data"
+    
+    use_gt_kpts = False
+    if args.dataset[-2:] == "gt":
+        use_gt_kpts = True
+        args.dataset = args.dataset[:-2]
 
     if args.dataset == "COCO":
         set_folder = os.path.join(base,"COCO/original/val2017")
@@ -217,6 +222,9 @@ def determine_folders(args):
         set_folder = os.path.join(base,"CIHP/val2017")
         gt_folder = os.path.join(base,"CIHP/annotations/person_keypoints_val2017.json")
         kpts_folder = os.path.join(base,"CIHP/annotations/PMPose-b_GTmasks_CIHP_val.json")
+    
+    elif use_gt_kpts:
+        kpts_folder = gt_folder
 
     if args.vis_folder == "":
         set_out_folder = os.path.join(base_out, "SAM3_vis", "pt+text_prompt", f"vis_{args.dataset}")
@@ -448,9 +456,9 @@ def load_ids(gt_folder):
     with open(gt_folder, 'r') as f:
         data = json.load(f)
         filename_to_id = {img['file_name']: img['id'] for img in data['images']}
-        id_to_kpts = {img['id']: [] for img in data['images']}
+        id_to_instance = {img['id']: [] for img in data['images']}
 
-    return filename_to_id, id_to_kpts
+    return filename_to_id, id_to_instance
 
 def load_pts(gt_folder, id_to_kpts):
     with open(gt_folder, 'r') as f:
@@ -463,7 +471,7 @@ def load_pts(gt_folder, id_to_kpts):
 
     return id_to_kpts
 
-def load_pts_bboxes(gt_folder, id_to_kpts, bbox=False):
+def load_pts_bboxes(gt_folder, id_to_instance, bbox=False):
     id_to_bboxes = defaultdict(list)
     with open(gt_folder, 'r') as f:
         data = json.load(f)
@@ -471,10 +479,13 @@ def load_pts_bboxes(gt_folder, id_to_kpts, bbox=False):
             kpts = np.array(anno['keypoints']).reshape(-1, 3)
             vis = np.array(anno['visibility'])
             kpts[:, 2] = vis
-            id_to_kpts[anno['image_id']].append(kpts)
-            id_to_bboxes[anno['image_id']].append(anno['bbox'])
-    
-    return id_to_kpts, id_to_bboxes
+            id_to_instance[anno['image_id']].append({
+                'keypoints': kpts,
+                'bbox': anno['bbox'],
+                })
+            if 'id' in anno:
+                id_to_instance[anno['image_id']]['id'] = anno['id']
+    return id_to_instance
 
 def compress_logits(mask_logits, target_size=(256, 256)):
     """
