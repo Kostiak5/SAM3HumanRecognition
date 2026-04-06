@@ -89,7 +89,8 @@ def process_img(device, predictor, img_folder, img_path, img_out_folder, instanc
     n_kpts = args.n_kpts
     masks = []
     scores = []
-    
+    if out is not None and 'out_binary_masks' in out:
+        n_objs = len(out['out_binary_masks'])   
     for idx, instance in enumerate(instance_arr):
         pose_kpts = instance['keypoints']
         bbox = instance['bbox']
@@ -111,6 +112,7 @@ def process_img(device, predictor, img_folder, img_path, img_out_folder, instanc
         )
         points_labels_tensor = torch.ones(points_tensor.shape[0], dtype=torch.int32)
         obj_id = assign_mask_to_kpts(out['out_binary_masks'], point_coords_sorted[:n_kpts])
+
         if obj_id >= 0:
             response = predictor.handle_request(
                 request=dict(
@@ -127,7 +129,18 @@ def process_img(device, predictor, img_folder, img_path, img_out_folder, instanc
                 new_out = response["outputs"]
                 # print(f"IoU w text only: {GT_EVALUATOR.iou_to_gt(inst_id, out['out_binary_masks'][obj_id])}")
                 # print(f"IoU w text+pt: {GT_EVALUATOR.iou_to_gt(inst_id, new_out['out_binary_masks'][obj_id])}")
-
+        else:
+            response = predictor.handle_request(
+                request=dict(
+                    type="add_prompt",
+                    session_id=session_id,
+                    frame_index=frame_idx,
+                    points=points_tensor,
+                    point_labels=points_labels_tensor,
+                    obj_id=n_objs,
+                )
+            )
+            n_objs += 1
         if args.vis and args.vis_folder is not None:
             visualize_formatted_frame_output(
                 frame_idx,
