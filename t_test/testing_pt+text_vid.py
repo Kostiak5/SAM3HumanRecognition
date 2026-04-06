@@ -86,8 +86,7 @@ def process_img(device, predictor, img_folder, img_path, img_out_folder, pose_kp
         output_path=os.path.join(img_out_folder, f"{img_path}_text.jpg")
     )
 
-    print(f"out: {out}")
-
+    print(f"out keys: {out.keys}")
     n_kpts = args.n_kpts
     masks = []
     scores = []

@@ -326,8 +326,6 @@ def visualize_formatted_frame_output(
                 if hasattr(binary_mask, "sum")
                 else np.sum(binary_mask)
             )
-            print(f"bin_mask: {binary_mask}")
-            print(f"mask_sum: {mask_sum}")
 
             if mask_sum > 0:  # Only draw if mask has content
                 # Convert to torch tensor if it's not already
