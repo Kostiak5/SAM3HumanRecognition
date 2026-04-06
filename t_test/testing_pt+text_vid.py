@@ -224,7 +224,7 @@ def process_set(set_folder, set_out_folder=None, gt_folder=None, filename_to_id=
                     "image_id": int(img_id),
                     "category_id": 1
                 })
-    
+    predictor.shutdown()
     GT_EVALUATOR.eval_set(eval_arr)
 
 if __name__=="__main__":
