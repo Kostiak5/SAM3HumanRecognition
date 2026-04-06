@@ -223,7 +223,7 @@ def determine_folders(args):
         gt_folder = os.path.join(base,"CIHP/annotations/person_keypoints_val2017.json")
         kpts_folder = os.path.join(base,"CIHP/annotations/PMPose-b_GTmasks_CIHP_val.json")
     
-    elif use_gt_kpts:
+    if use_gt_kpts:
         kpts_folder = gt_folder
 
     if args.vis_folder == "":
@@ -465,8 +465,9 @@ def load_pts(gt_folder, id_to_kpts):
         data = json.load(f)
         for anno in data['annotations']:
             kpts = np.array(anno['keypoints']).reshape(-1, 3)
-            vis = np.array(anno['visibility'])
-            kpts[:, 2] = vis
+            if 'visibility' in anno:
+                vis = np.array(anno['visibility'])
+                kpts[:, 2] = vis 
             id_to_kpts[anno['image_id']].append(kpts)
 
     return id_to_kpts
@@ -477,14 +478,15 @@ def load_pts_bboxes(gt_folder, id_to_instance, bbox=False):
         data = json.load(f)
         for anno in data['annotations']:
             kpts = np.array(anno['keypoints']).reshape(-1, 3)
-            vis = np.array(anno['visibility'])
-            kpts[:, 2] = vis
+            if 'visibility' in anno:
+                vis = np.array(anno['visibility'])
+                kpts[:, 2] = vis 
             id_to_instance[anno['image_id']].append({
                 'keypoints': kpts,
                 'bbox': anno['bbox'],
                 })
             if 'id' in anno:
-                id_to_instance[anno['image_id']]['id'] = anno['id']
+                id_to_instance[anno['image_id']][-1]['id'] = anno['id']
     return id_to_instance
 
 def compress_logits(mask_logits, target_size=(256, 256)):

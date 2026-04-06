@@ -57,11 +57,6 @@ def abs_to_rel_coords(coords, IMG_WIDTH, IMG_HEIGHT, coord_type="point"):
 
 def process_img(device, predictor, img_folder, img_path, img_out_folder, instance_arr, text_prompt="person", args=None):
     logs = []
-    pose_kpts_arr = instance_arr['keypoints']
-    bbox_arr = instance_arr['bbox']
-    inst_id = -1
-    if 'id' in instance_arr:
-        inst_id = instance_arr['id']
     # Load an image
     logs.append("Start processing")
     image = Image.open(os.path.join(img_folder, img_path))
@@ -98,7 +93,11 @@ def process_img(device, predictor, img_folder, img_path, img_out_folder, instanc
     masks = []
     scores = []
     
-    for idx, (pose_kpts, bbox) in enumerate(zip(pose_kpts_arr, bbox_arr)):
+    for idx, instance in enumerate(instance_arr):
+        pose_kpts = instance['keypoints']
+        bbox = instance['bbox']
+        if 'id' in instance:
+            inst_id = instance['id']
         all_point_coords = []    
         # print(pose_kpts[:, :2][:n_kpts], pose_kpts[:, 2][:n_kpts])
         # base_state = copy.deepcopy(base_gl_state)
@@ -113,7 +112,7 @@ def process_img(device, predictor, img_folder, img_path, img_out_folder, instanc
             abs_to_rel_coords(point_coords_sorted[:n_kpts], imgw, imgh, coord_type="point"),
             dtype=torch.float32,
         )
-        points_labels_tensor = torch.ones(n_kpts, dtype=torch.int32)
+        points_labels_tensor = torch.ones(points_tensor.shape[0], dtype=torch.int32)
         obj_id = assign_mask_to_kpts(out['out_binary_masks'], point_coords_sorted[:n_kpts])
         if obj_id >= 0:
             response = predictor.handle_request(
@@ -129,8 +128,8 @@ def process_img(device, predictor, img_folder, img_path, img_out_folder, instanc
 
             if inst_id >= 0:
                 new_out = response["outputs"]
-                print(f"IoU w text only: {GT_EVALUATOR.iou_to_gt(inst_id, out['bin_masks'][obj_id])}")
-                print(f"IoU w text+pt: {GT_EVALUATOR.iou_to_gt(inst_id, new_out['bin_masks'][obj_id])}")
+                print(f"IoU w text only: {GT_EVALUATOR.iou_to_gt(inst_id, out['out_binary_masks'][obj_id])}")
+                print(f"IoU w text+pt: {GT_EVALUATOR.iou_to_gt(inst_id, new_out['out_binary_masks'][obj_id])}")
 
         visualize_formatted_frame_output(
             frame_idx,
@@ -161,8 +160,10 @@ def process_img(device, predictor, img_folder, img_path, img_out_folder, instanc
     
     # Get the masks, bounding boxes, and scores
     # masks, scores = output["masks"], output["boxes"], output["scores"]
+    final_masks = response["outputs"]['out_binary_masks']
+    final_scores = response["outputs"]['out_probs']
     logs.append([scores])
-    output = [masks, scores]
+    output = [final_masks, final_scores]
     return logs, output
 
 
