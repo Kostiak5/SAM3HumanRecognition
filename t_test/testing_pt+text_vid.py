@@ -88,7 +88,7 @@ def process_img(device, predictor, img_folder, img_path, img_out_folder, instanc
         output_path=os.path.join(img_out_folder, f"{img_path}_text.jpg")
     )
 
-    print(f"out keys: {out}")
+    # print(f"out keys: {out}")
     n_kpts = args.n_kpts
     masks = []
     scores = []
@@ -128,17 +128,18 @@ def process_img(device, predictor, img_folder, img_path, img_out_folder, instanc
 
             if inst_id >= 0:
                 new_out = response["outputs"]
-                print(f"IoU w text only: {GT_EVALUATOR.iou_to_gt(inst_id, out['out_binary_masks'][obj_id])}")
-                print(f"IoU w text+pt: {GT_EVALUATOR.iou_to_gt(inst_id, new_out['out_binary_masks'][obj_id])}")
+                # print(f"IoU w text only: {GT_EVALUATOR.iou_to_gt(inst_id, out['out_binary_masks'][obj_id])}")
+                # print(f"IoU w text+pt: {GT_EVALUATOR.iou_to_gt(inst_id, new_out['out_binary_masks'][obj_id])}")
 
-        visualize_formatted_frame_output(
-            frame_idx,
-            [os.path.join(img_folder, img_path)],
-            outputs_list=[prepare_masks_for_visualization({frame_idx: out})],
-            titles=["SAM 3 Dense Tracking outputs"],
-            figsize=(6, 4),
-            output_path=os.path.join(img_out_folder, f"{img_path}_{idx}.jpg")
-        )
+        if args.vis and args.vis_folder is not None:
+            visualize_formatted_frame_output(
+                frame_idx,
+                [os.path.join(img_folder, img_path)],
+                outputs_list=[prepare_masks_for_visualization({frame_idx: out})],
+                titles=["SAM 3 Dense Tracking outputs"],
+                figsize=(6, 4),
+                output_path=os.path.join(img_out_folder, f"{img_path}_text.jpg")
+            )
         # if 'scores' in base_state and len(base_state['scores']) != 0:
         #     # this_masks = base_state["masks"].cpu().detach().numpy()
         #     # this_scores = base_state["scores"].cpu().detach().to(torch.float32).numpy()
