@@ -20,20 +20,22 @@ from sam3.visualization_utils import (
 )
 COLORS = generate_colors(50)
 
-def assign_mask_to_kpts(mask, kpts):
+def assign_mask_to_kpts(masks, kpts):
     mask_i = -1
     n_kpts_inside_mask = 0
-    for kpt in kpts:
-        if 0 < round(kpt[1]) < mask.shape[0] and 0 < round(kpt[0]) < mask.shape[1] and mask[round(kpt[1])][round(kpt[0])] == 1:
-            n_kpts_inside_mask += 1
+    for mask_i, mask in enumerate(masks):
+        print(f"Assigning: {mask.sum()} vs {kpts}")
+        for kpt in kpts:
+            if 0 < round(kpt[1]) < mask.shape[0] and 0 < round(kpt[0]) < mask.shape[1] and mask[round(kpt[1])][round(kpt[0])] == 1:
+                n_kpts_inside_mask += 1
 
-            if n_kpts_inside_mask >= 3:
-                print("Found")
-                break
-    if mask_i == -1:
-        print("Not found")
+                if n_kpts_inside_mask >= 3:
+                    print("Found", mask_i)
+                    return mask_i
 
-    return mask_i
+    print("Not found")
+
+    return -1
     
 def abs_to_rel_coords(coords, IMG_WIDTH, IMG_HEIGHT, coord_type="point"):
     """Convert absolute coordinates to relative coordinates (0-1 range)
@@ -86,7 +88,7 @@ def process_img(device, predictor, img_folder, img_path, img_out_folder, pose_kp
         output_path=os.path.join(img_out_folder, f"{img_path}_text.jpg")
     )
 
-    print(f"out keys: {out.keys}")
+    print(f"out keys: {out}")
     n_kpts = args.n_kpts
     masks = []
     scores = []
@@ -108,16 +110,17 @@ def process_img(device, predictor, img_folder, img_path, img_out_folder, pose_kp
         )
         points_labels_tensor = torch.ones(n_kpts, dtype=torch.int32)
         obj_id = assign_mask_to_kpts(out['out_binary_masks'], point_coords_sorted[:n_kpts])
-        response = predictor.handle_request(
-            request=dict(
-                type="add_prompt",
-                session_id=session_id,
-                frame_index=frame_idx,
-                points=points_tensor,
-                point_labels=points_labels_tensor,
-                obj_id=obj_id,
+        if obj_id >= 0:
+            response = predictor.handle_request(
+                request=dict(
+                    type="add_prompt",
+                    session_id=session_id,
+                    frame_index=frame_idx,
+                    points=points_tensor,
+                    point_labels=points_labels_tensor,
+                    obj_id=obj_id,
+                )
             )
-        )
 
         visualize_formatted_frame_output(
             frame_idx,
