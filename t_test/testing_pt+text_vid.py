@@ -102,6 +102,7 @@ def process_img(device, predictor, img_folder, img_path, img_out_folder, instanc
         point_coords = pose_kpts[:, :2]
         point_visibility = pose_kpts[:, 2]
         point_coords_sorted, point_visibility_sorted, _ = select_keypoints(0.5, point_coords, point_visibility, method="distance+confidence")
+        print(f"pcs, pvs {point_coords_sorted} {point_visibility_sorted}")
         if point_visibility_sorted is None or len(point_visibility_sorted) == 0:
             continue
 
@@ -119,29 +120,11 @@ def process_img(device, predictor, img_folder, img_path, img_out_folder, instanc
                     type="add_prompt",
                     session_id=session_id,
                     frame_index=frame_idx,
-                    points=points_tensor[:1],
-                    point_labels=points_labels_tensor[:1],
+                    points=points_tensor[:n_kpts],
+                    point_labels=points_labels_tensor[:n_kpts],
                     obj_id=obj_id,
                 )
             ) 
-
-            if inst_id >= 0:
-                new_out = response["outputs"]
-                # print(f"IoU w text only: {GT_EVALUATOR.iou_to_gt(inst_id, out['out_binary_masks'][obj_id])}")
-                # print(f"IoU w text+pt: {GT_EVALUATOR.iou_to_gt(inst_id, new_out['out_binary_masks'][obj_id])}")
-        else:
-            response = predictor.handle_request(
-                request=dict(
-                    type="add_prompt",
-                    session_id=session_id,
-                    frame_index=frame_idx,
-                    points=point_coords_sorted[:n_kpts],
-                    point_labels=points_labels_tensor,
-                    obj_id=n_objs,
-                )
-            )
-            n_objs += 1
-            print("added new obj")
             if args.vis and args.vis_folder is not None:
                 this_out = response['outputs']
                 print(response['outputs']['out_binary_masks'].shape)
@@ -151,8 +134,38 @@ def process_img(device, predictor, img_folder, img_path, img_out_folder, instanc
                     outputs_list=[prepare_masks_for_visualization({frame_idx: this_out})],
                     titles=["SAM 3 Dense Tracking outputs"],
                     figsize=(6, 4),
-                    output_path=os.path.join(img_out_folder, f"{img_path}_{n_objs}.jpg")
+                    output_path=os.path.join(img_out_folder, f"{img_path}_{obj_id}.jpg")
                 )
+            print("refining obj")
+            # if inst_id >= 0:
+                # new_out = response["outputs"]
+                # print(f"IoU w text only: {GT_EVALUATOR.iou_to_gt(inst_id, out['out_binary_masks'][obj_id])}")
+                # print(f"IoU w text+pt: {GT_EVALUATOR.iou_to_gt(inst_id, new_out['out_binary_masks'][obj_id])}")
+        # else:
+        #     print(f"testing points {points_tensor}")
+        #     response = predictor.handle_request(
+        #         request=dict(
+        #             type="add_prompt",
+        #             session_id=session_id,
+        #             frame_index=frame_idx,
+        #             points=points_tensor,
+        #             point_labels=points_labels_tensor,
+        #             obj_id=n_objs,
+        #         )
+        #     )
+        #     n_objs += 1
+        #     print("added new obj")
+        #     if args.vis and args.vis_folder is not None:
+        #         this_out = response['outputs']
+        #         print(response['outputs']['out_binary_masks'].shape)
+        #         visualize_formatted_frame_output(
+        #             frame_idx,
+        #             [os.path.join(img_folder, img_path)],
+        #             outputs_list=[prepare_masks_for_visualization({frame_idx: this_out})],
+        #             titles=["SAM 3 Dense Tracking outputs"],
+        #             figsize=(6, 4),
+        #             output_path=os.path.join(img_out_folder, f"{img_path}_{n_objs}.jpg")
+        #         )
         
         # if 'scores' in base_state and len(base_state['scores']) != 0:
         #     # this_masks = base_state["masks"].cpu().detach().numpy()
