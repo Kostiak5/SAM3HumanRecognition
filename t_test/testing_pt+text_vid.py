@@ -197,6 +197,8 @@ def process_set(set_folder, set_out_folder=None, gt_folder=None, filename_to_id=
     i = 0
     for img_path in tqdm(os.listdir(set_folder)):
         i += 1
+        if i == 50:
+            break
 
         if img_path[-3:] != "jpg":
             continue
