@@ -1480,6 +1480,7 @@ class Sam3VideoInferenceWithInstanceInteractivity(Sam3VideoInference):
             logger.debug(
                 f"[rank={self.rank}] Adding new object with id {obj_id} at frame {frame_idx}."
             )
+            print(f"[rank={self.rank}] Adding new object with id {obj_id} at frame {frame_idx}.")
             self.add_action_history(
                 inference_state, "add", frame_idx=frame_idx, obj_ids=[obj_id]
             )
@@ -1498,6 +1499,8 @@ class Sam3VideoInferenceWithInstanceInteractivity(Sam3VideoInference):
             logger.debug(
                 f"[rank={self.rank}] Refining existing object with id {obj_id} at frame {frame_idx}."
             )
+            print(f"[rank={self.rank}] Refining existing object with id {obj_id} at frame {frame_idx}.")
+
             self.add_action_history(
                 inference_state, "refine", frame_idx=frame_idx, obj_ids=[obj_id]
             )
