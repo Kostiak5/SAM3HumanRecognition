@@ -22,16 +22,28 @@ from t_test.compare_to_gt import GT
 COLORS = generate_colors(50)
 
 def assign_mask_to_kpts(masks, kpts):
-    mask_i = -1
-    n_kpts_inside_mask = 0
-    for mask_i, mask in enumerate(masks):
-        for kpt in kpts:
-            if 0 < round(kpt[1]) < mask.shape[0] and 0 < round(kpt[0]) < mask.shape[1] and mask[round(kpt[1])][round(kpt[0])] == 1:
-                n_kpts_inside_mask += 1
+    if len(kpts) == 0:
+        return -1
 
-                if n_kpts_inside_mask >= 3:
-                    return mask_i
+    # 1. Round and convert to integers once
+    # kpts is (N, 2) -> [x, y]
+    coords = np.round(kpts).astype(int)
+    x = coords[:, 0]
+    y = coords[:, 1]
 
+    for i, mask in enumerate(masks):
+        h, w = mask.shape
+        
+        # 2. Filter points that fall outside the mask boundaries
+        valid_idx = (x >= 0) & (x < w) & (y >= 0) & (y < h)
+        
+        # 3. Vectorized lookup: Index the mask with all valid x and y at once
+        # mask[y, x] returns an array of values (0s and 1s)
+        # We sum them to see how many keypoints hit a '1'
+        hits = np.sum(mask[y[valid_idx], x[valid_idx]])
+
+        if hits >= 3:
+            return i
 
     return -1
     
@@ -213,7 +225,7 @@ def process_set(set_folder, set_out_folder=None, gt_folder=None, filename_to_id=
     i = 0
     for img_path in tqdm(os.listdir(set_folder)):
         i += 1
-        if i == 50:
+        if i == 100:
             break
 
         if img_path[-3:] != "jpg":
