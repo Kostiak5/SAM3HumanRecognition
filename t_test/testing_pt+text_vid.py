@@ -135,7 +135,7 @@ def process_img(device, predictor, img_folder, img_path, img_out_folder, instanc
                     type="add_prompt",
                     session_id=session_id,
                     frame_index=frame_idx,
-                    points=points_tensor,
+                    points=point_coords_sorted[:n_kpts],
                     point_labels=points_labels_tensor,
                     obj_id=n_objs,
                 )
