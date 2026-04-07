@@ -143,10 +143,11 @@ def process_img(device, predictor, img_folder, img_path, img_out_folder, instanc
             n_objs += 1
             print("added new obj")
             if args.vis and args.vis_folder is not None:
+                this_out = response['outputs']
                 visualize_formatted_frame_output(
                     frame_idx,
                     [os.path.join(img_folder, img_path)],
-                    outputs_list=[prepare_masks_for_visualization({frame_idx: out})],
+                    outputs_list=[prepare_masks_for_visualization({frame_idx: this_out})],
                     titles=["SAM 3 Dense Tracking outputs"],
                     figsize=(6, 4),
                     output_path=os.path.join(img_out_folder, f"{img_path}_{n_objs}.jpg")
