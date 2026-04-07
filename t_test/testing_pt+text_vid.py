@@ -144,6 +144,7 @@ def process_img(device, predictor, img_folder, img_path, img_out_folder, instanc
             print("added new obj")
             if args.vis and args.vis_folder is not None:
                 this_out = response['outputs']
+                print(response['outputs']['out_binary_masks'].shape)
                 visualize_formatted_frame_output(
                     frame_idx,
                     [os.path.join(img_folder, img_path)],
