@@ -71,7 +71,11 @@ def process_img(device, model, processor, img_folder, img_path, img_out_folder, 
         normalized_pt[:, 1] /= imgh
 
         for i in range(1):
-            base_state = processor.add_point_prompt(state=base_state, point=normalized_pt[i], label=1)
+            normalized_bbox = bbox
+            normalized_bbox[:, [0, 2]] /= imgw
+            normalized_bbox[:, [1, 3]] /= imgh
+            base_state = processor.add_geometric_prompt(state=base_state, box=normalized_bbox, label=1)
+            # base_state = processor.add_point_prompt(state=base_state, point=normalized_pt[i], label=1)
             # point_coords_cropped = point_coords_sorted[:(i+1)]
             # if len(point_coords_cropped.shape) < 2:
             #     point_coords_cropped = [point_coords_cropped]
@@ -83,19 +87,19 @@ def process_img(device, model, processor, img_folder, img_path, img_out_folder, 
             #             points=point_coords_sorted[:(i+1)]
             #         )
             # cv2.imwrite(os.path.join(img_out_folder, f"{img_path}_{idx}_{i}.jpg"), image_out)
-            this_masks, this_scores, this_logits = model.predict_inst(
-            inference_state,
-            point_coords=point_coords_sorted[:n_kpts],
-            point_labels=np.ones_like(point_visibility_sorted[:n_kpts]),
-            multimask_output=False,
-            )
+            # this_masks, this_scores, this_logits = model.predict_inst(
+            # inference_state,
+            # point_coords=point_coords_sorted[:n_kpts],
+            # point_labels=np.ones_like(point_visibility_sorted[:n_kpts]),
+            # multimask_output=False,
+            # )
 
         if 'scores' in base_state and len(base_state['scores']) != 0:
-            # this_masks = base_state["masks"].cpu().detach().numpy()
-            # this_scores = base_state["scores"].cpu().detach().to(torch.float32).numpy()
+            this_masks = base_state["masks"].cpu().detach().numpy()
+            this_scores = base_state["scores"].cpu().detach().to(torch.float32).numpy()
             # max_score_mask = np.argmax(this_scores)
-            masks.append(this_masks[0])
-            scores.append(this_scores[0])
+            # masks.append(this_masks[0])
+            # scores.append(this_scores[0])
             if args is not None and args.vis and base_state["masks"] is not None and len(base_state["masks"]) > 0:
                 print(base_state["masks"].cpu().detach().numpy().shape)
                 image_out = visualize(
