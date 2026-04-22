@@ -40,9 +40,9 @@ def process_img(device, model, processor, img_folder, img_path, img_out_folder, 
     # Load an image
     logs.append("Start processing")
     image = Image.open(os.path.join(img_folder, img_path))
-    imgw, imgh = image.size
+    imgw, imgh = image.size 
     inference_state = processor.set_image(image)
-    # inference_state = processor.set_text_prompt(state=inference_state, prompt=text_prompt)
+    inference_state = processor.set_text_prompt(state=inference_state, prompt=text_prompt)
     # Prompt the model with text
     logs.append("Image set")
 
@@ -82,7 +82,7 @@ def process_img(device, model, processor, img_folder, img_path, img_out_folder, 
                 w / imgw,   # Normalized Width
                 h / imgh    # Normalized Height
             ])
-            base_state = processor.add_geometric_prompt(state=base_state, box=normalized_bbox, label=1)
+            print(base_state['encoder_out'])
             # base_state = processor.add_point_prompt(state=base_state, point=normalized_pt[i], label=1)
             # point_coords_cropped = point_coords_sorted[:(i+1)]
             # if len(point_coords_cropped.shape) < 2:
