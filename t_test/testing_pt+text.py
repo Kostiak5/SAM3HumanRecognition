@@ -37,10 +37,6 @@ def assign_mask_to_kpts(masks, kpts):
 
 def process_img(device, model, processor, img_folder, img_path, img_out_folder, instance_arr, text_prompt="human", args=None):
     logs = []
-    pose_kpts_arr = instance_arr['keypoints']
-    bbox_arr = instance_arr['bbox']
-    if 'id' in instance_arr:
-        inst_id = instance_arr['id']
     # Load an image
     logs.append("Start processing")
     image = Image.open(os.path.join(img_folder, img_path))
@@ -56,7 +52,9 @@ def process_img(device, model, processor, img_folder, img_path, img_out_folder, 
     
     base_gl_state = copy.deepcopy(inference_state)
 
-    for idx, (pose_kpts, bbox) in enumerate(zip(pose_kpts_arr, bbox_arr)):
+    for idx, inst in enumerate(instance_arr):
+        pose_kpts = inst['keypoints']
+        bbox = inst['bbox']
         all_point_coords = []    
         # print(pose_kpts[:, :2][:n_kpts], pose_kpts[:, 2][:n_kpts])
         base_state = copy.deepcopy(base_gl_state)
@@ -71,9 +69,19 @@ def process_img(device, model, processor, img_folder, img_path, img_out_folder, 
         normalized_pt[:, 1] /= imgh
 
         for i in range(1):
-            normalized_bbox = bbox
-            normalized_bbox[:, [0, 2]] /= imgw
-            normalized_bbox[:, [1, 3]] /= imgh
+            x, y, w, h = bbox
+
+            # Calculate the center points
+            cx = x + (w / 2.0)
+            cy = y + (h / 2.0)
+
+            # Create the normalized array directly
+            normalized_bbox = np.array([
+                cx / imgw,  # Normalized Center X
+                cy / imgh,  # Normalized Center Y
+                w / imgw,   # Normalized Width
+                h / imgh    # Normalized Height
+            ])
             base_state = processor.add_geometric_prompt(state=base_state, box=normalized_bbox, label=1)
             # base_state = processor.add_point_prompt(state=base_state, point=normalized_pt[i], label=1)
             # point_coords_cropped = point_coords_sorted[:(i+1)]
@@ -97,6 +105,7 @@ def process_img(device, model, processor, img_folder, img_path, img_out_folder, 
         if 'scores' in base_state and len(base_state['scores']) != 0:
             this_masks = base_state["masks"].cpu().detach().numpy()
             this_scores = base_state["scores"].cpu().detach().to(torch.float32).numpy()
+            this_scores_argmax = np.argmax(this_scores)
             # max_score_mask = np.argmax(this_scores)
             # masks.append(this_masks[0])
             # scores.append(this_scores[0])
@@ -105,9 +114,9 @@ def process_img(device, model, processor, img_folder, img_path, img_out_folder, 
                 image_out = visualize(
                         os.path.join(img_folder, img_path),
                         COLORS,
-                        masks=np.array([this_masks[0]]),
-                        scores=np.array([this_scores[0]]),
-                        points=[point_coords_sorted[0]]
+                        masks=np.array([this_masks[this_scores_argmax]]),
+                        scores=np.array([this_scores[this_scores_argmax]]),
+                        boxes=np.array([[bbox[0], bbox[1], bbox[2] + bbox[0], bbox[3] + bbox[1]]])
                     )
                 cv2.imwrite(os.path.join(img_out_folder, f"{img_path}_{idx}.jpg"), image_out)
                 logs.append(["Saved visualization: ", os.path.join(img_out_folder, img_path)])
