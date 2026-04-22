@@ -22,16 +22,28 @@ from t_test.compare_to_gt import GT
 COLORS = generate_colors(50)
 
 def assign_mask_to_kpts(masks, kpts):
-    mask_i = -1
-    n_kpts_inside_mask = 0
-    for mask_i, mask in enumerate(masks):
-        for kpt in kpts:
-            if 0 < round(kpt[1]) < mask.shape[0] and 0 < round(kpt[0]) < mask.shape[1] and mask[round(kpt[1])][round(kpt[0])] == 1:
-                n_kpts_inside_mask += 1
+    if len(kpts) == 0:
+        return -1
 
-                if n_kpts_inside_mask >= 3:
-                    return mask_i
+    # 1. Round and convert to integers once
+    # kpts is (N, 2) -> [x, y]
+    coords = np.round(kpts).astype(int)
+    x = coords[:, 0]
+    y = coords[:, 1]
 
+    for i, mask in enumerate(masks):
+        h, w = mask.shape
+        
+        # 2. Filter points that fall outside the mask boundaries
+        valid_idx = (x >= 0) & (x < w) & (y >= 0) & (y < h)
+        
+        # 3. Vectorized lookup: Index the mask with all valid x and y at once
+        # mask[y, x] returns an array of values (0s and 1s)
+        # We sum them to see how many keypoints hit a '1'
+        hits = np.sum(mask[y[valid_idx], x[valid_idx]])
+
+        if hits >= 3:
+            return i
 
     return -1
     
@@ -102,6 +114,7 @@ def process_img(device, predictor, img_folder, img_path, img_out_folder, instanc
         point_coords = pose_kpts[:, :2]
         point_visibility = pose_kpts[:, 2]
         point_coords_sorted, point_visibility_sorted, _ = select_keypoints(0.5, point_coords, point_visibility, method="distance+confidence")
+        print(f"pcs, pvs {point_coords_sorted} {point_visibility_sorted}")
         if point_visibility_sorted is None or len(point_visibility_sorted) == 0:
             continue
 
@@ -119,23 +132,35 @@ def process_img(device, predictor, img_folder, img_path, img_out_folder, instanc
                     type="add_prompt",
                     session_id=session_id,
                     frame_index=frame_idx,
-                    points=points_tensor[:1],
-                    point_labels=points_labels_tensor[:1],
+                    points=points_tensor[:n_kpts],
+                    point_labels=points_labels_tensor[:n_kpts],
                     obj_id=obj_id,
                 )
             ) 
-
-            if inst_id >= 0:
-                new_out = response["outputs"]
+            if args.vis and args.vis_folder is not None:
+                this_out = response['outputs']
+                print(response['outputs']['out_binary_masks'].shape)
+                visualize_formatted_frame_output(
+                    frame_idx,
+                    [os.path.join(img_folder, img_path)],
+                    outputs_list=[prepare_masks_for_visualization({frame_idx: this_out})],
+                    titles=["SAM 3 Dense Tracking outputs"],
+                    figsize=(6, 4),
+                    output_path=os.path.join(img_out_folder, f"{img_path}_{obj_id}.jpg")
+                )
+            print("refining obj")
+            # if inst_id >= 0:
+                # new_out = response["outputs"]
                 # print(f"IoU w text only: {GT_EVALUATOR.iou_to_gt(inst_id, out['out_binary_masks'][obj_id])}")
                 # print(f"IoU w text+pt: {GT_EVALUATOR.iou_to_gt(inst_id, new_out['out_binary_masks'][obj_id])}")
         else:
+            print(f"testing points {points_tensor}")
             response = predictor.handle_request(
                 request=dict(
                     type="add_prompt",
                     session_id=session_id,
                     frame_index=frame_idx,
-                    points=point_coords_sorted[:n_kpts],
+                    points=points_tensor,
                     point_labels=points_labels_tensor,
                     obj_id=n_objs,
                 )
@@ -200,8 +225,8 @@ def process_set(set_folder, set_out_folder=None, gt_folder=None, filename_to_id=
     i = 0
     for img_path in tqdm(os.listdir(set_folder)):
         i += 1
-        if i == 50:
-            break
+        if i == 100:
+            break 
 
         if img_path[-3:] != "jpg":
             continue

@@ -473,7 +473,6 @@ def load_pts(gt_folder, id_to_kpts):
     return id_to_kpts
 
 def load_pts_bboxes(gt_folder, id_to_instance, bbox=False):
-    id_to_bboxes = defaultdict(list)
     with open(gt_folder, 'r') as f:
         data = json.load(f)
         for anno in data['annotations']:
