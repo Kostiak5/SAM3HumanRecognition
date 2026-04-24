@@ -412,6 +412,14 @@ class SAM3InteractiveImagePredictor(nn.Module):
             feat_level[img_idx].unsqueeze(0)
             for feat_level in self._features["high_res_feats"]
         ]
+
+        ## EDITED
+        text_tokens = hs_queries.transpose(0, 1)
+        # B. Get point/box tokens (if user clicked)
+        if point_coords is not None:
+            combined_sparse_prompts = torch.cat([sparse_embeddings, text_tokens], dim=1)
+        else:
+            combined_sparse_prompts = text_tokens
         low_res_masks, iou_predictions, _, _ = self.model.sam_mask_decoder(
             image_embeddings=self._features["image_embed"][img_idx].unsqueeze(0),
             image_pe=self.model.sam_prompt_encoder.get_dense_pe(),

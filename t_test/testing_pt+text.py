@@ -82,7 +82,13 @@ def process_img(device, model, processor, img_folder, img_path, img_out_folder, 
                 w / imgw,   # Normalized Width
                 h / imgh    # Normalized Height
             ])
-            print(base_state['encoder_out'])
+            print("Enc hidden states:" , base_state['encoder_hidden_states'])
+            this_masks, this_scores, this_logits = model.predict_inst(
+                inference_state,
+                point_coords=point_coords_sorted[:n_kpts],
+                point_labels=np.ones_like(point_visibility_sorted[:n_kpts]),
+                multimask_output=False,
+                img_text_features=base_state['encoder_hidden_states']        )
             # base_state = processor.add_point_prompt(state=base_state, point=normalized_pt[i], label=1)
             # point_coords_cropped = point_coords_sorted[:(i+1)]
             # if len(point_coords_cropped.shape) < 2:
