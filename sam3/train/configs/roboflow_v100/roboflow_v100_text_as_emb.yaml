@@ -426,9 +426,9 @@ launcher:
 
 submitit:
   account: null
-  partition: null
+  partition: amdgpu
   qos: null
-  timeout_hour: 72
+  timeout_hour: 24 
   use_cluster: True
   cpus_per_task: 10
   port_range: [10000, 65000]
