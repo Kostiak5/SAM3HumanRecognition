@@ -131,8 +131,9 @@ class MaskDecoder(nn.Module):
           torch.Tensor: batched predictions of mask quality
           torch.Tensor: batched SAM token for mask output
         """
+
         masks, iou_pred, mask_tokens_out, object_score_logits = self.predict_masks(
-            image_embeddings=image_embeddings,
+            image_embeddings=image_embeddings, 
             image_pe=image_pe,
             sparse_prompt_embeddings=sparse_prompt_embeddings,
             dense_prompt_embeddings=dense_prompt_embeddings,
@@ -208,13 +209,6 @@ class MaskDecoder(nn.Module):
         ), "image_pe should have size 1 in batch dim (from `get_dense_pe()`)"
         pos_src = torch.repeat_interleave(image_pe, tokens.shape[0], dim=0)
         b, c, h, w = src.shape
-
-        ## EDITED
-        if hs_queries is not None:
-            if hs_queries.dim() == 4:
-                hs_queries = hs_queries[-1]
-            enhanced_prompt_embeddings = torch.cat([sparse_prompt_embeddings, hs_queries], dim=1)
-            tokens = torch.cat((output_tokens, enhanced_prompt_embeddings), dim=1)
 
         # Run the transformer
         hs, src = self.transformer(src, pos_src, tokens)

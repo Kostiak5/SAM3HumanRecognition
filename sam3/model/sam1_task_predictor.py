@@ -414,15 +414,20 @@ class SAM3InteractiveImagePredictor(nn.Module):
         ]
 
         ## EDITED
-        text_tokens = hs_queries.transpose(0, 1)
-        # B. Get point/box tokens (if user clicked)
-        if point_coords is not None:
-            combined_sparse_prompts = torch.cat([sparse_embeddings, text_tokens], dim=1)
-        else:
-            combined_sparse_prompts = text_tokens
+        flat_memory = hs_queries["encoder_hidden_states"]       # Shape: (Seq, Batch, Channels)
+        flat_pos = hs_queries["pos_embed"]       # Shape: (Seq, Batch, Channels)
+        spatial_shapes = hs_queries["spatial_shapes"] 
+
+        # 3. Reshape them back to spatial dimensions (The Bridge)
+        B, C = flat_memory.shape[1], flat_memory.shape[2]
+        H, W = spatial_shapes[0] 
+
+        # Transpose and view as (B, C, H, W)
+        fused_image_embeddings = flat_memory.transpose(0, 1).view(B, C, H, W)
+        image_pe = flat_pos.transpose(0, 1).view(B, C, H, W)
         low_res_masks, iou_predictions, _, _ = self.model.sam_mask_decoder(
-            image_embeddings=self._features["image_embed"][img_idx].unsqueeze(0),
-            image_pe=self.model.sam_prompt_encoder.get_dense_pe(),
+            image_embeddings=fused_image_embeddings,
+            image_pe=self.model.sam_prompt_encoder.get_dense_pe(), #image_pe
             sparse_prompt_embeddings=sparse_embeddings,
             dense_prompt_embeddings=dense_embeddings,
             multimask_output=multimask_output,
@@ -430,6 +435,16 @@ class SAM3InteractiveImagePredictor(nn.Module):
             high_res_features=high_res_features,
             hs_queries=hs_queries
         )
+        # low_res_masks, iou_predictions, _, _ = self.model.sam_mask_decoder(
+        #     image_embeddings=self._features["image_embed"][img_idx].unsqueeze(0),
+        #     image_pe=self.model.sam_prompt_encoder.get_dense_pe(),
+        #     sparse_prompt_embeddings=sparse_embeddings,
+        #     dense_prompt_embeddings=dense_embeddings,
+        #     multimask_output=multimask_output,
+        #     repeat_image=batched_mode,
+        #     high_res_features=high_res_features,
+        #     hs_queries=hs_queries
+        # )
 
         # Upscale the masks to the original image resolution
 

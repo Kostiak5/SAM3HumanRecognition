@@ -82,13 +82,20 @@ def process_img(device, model, processor, img_folder, img_path, img_out_folder, 
                 w / imgw,   # Normalized Width
                 h / imgh    # Normalized Height
             ])
-            print("Enc hidden states:" , base_state['encoder_hidden_states'])
+            print("Enc hidden states:" , base_state['encoder_out']['encoder_hidden_states'])
             this_masks, this_scores, this_logits = model.predict_inst(
                 inference_state,
                 point_coords=point_coords_sorted[:n_kpts],
                 point_labels=np.ones_like(point_visibility_sorted[:n_kpts]),
                 multimask_output=False,
-                img_text_features=base_state['encoder_hidden_states']        )
+                hs_queries=base_state['encoder_out']      )
+        
+            # this_masks2, this_scores2, this_logits = model.predict_inst(
+            #     inference_state,
+            #     point_coords=point_coords_sorted[:n_kpts],
+            #     point_labels=np.ones_like(point_visibility_sorted[:n_kpts]),
+            #     multimask_output=False)
+
             # base_state = processor.add_point_prompt(state=base_state, point=normalized_pt[i], label=1)
             # point_coords_cropped = point_coords_sorted[:(i+1)]
             # if len(point_coords_cropped.shape) < 2:
@@ -109,8 +116,8 @@ def process_img(device, model, processor, img_folder, img_path, img_out_folder, 
             # )
 
         if 'scores' in base_state and len(base_state['scores']) != 0:
-            this_masks = base_state["masks"].cpu().detach().numpy()
-            this_scores = base_state["scores"].cpu().detach().to(torch.float32).numpy()
+            # this_masks = base_state["masks"].cpu().detach().numpy()
+            # this_scores = base_state["scores"].cpu().detach().to(torch.float32).numpy()
             this_scores_argmax = np.argmax(this_scores)
             # max_score_mask = np.argmax(this_scores)
             # masks.append(this_masks[0])
@@ -120,11 +127,12 @@ def process_img(device, model, processor, img_folder, img_path, img_out_folder, 
                 image_out = visualize(
                         os.path.join(img_folder, img_path),
                         COLORS,
-                        masks=np.array([this_masks[this_scores_argmax]]),
-                        scores=np.array([this_scores[this_scores_argmax]]),
-                        boxes=np.array([[bbox[0], bbox[1], bbox[2] + bbox[0], bbox[3] + bbox[1]]])
+                        masks=np.array([this_masks[0]]),
+                        scores=np.array([this_scores[0]]),
+                        boxes=np.array([[bbox[0], bbox[1], bbox[2] + bbox[0], bbox[3] + bbox[1]]]),
+                        points=point_coords_sorted[:n_kpts]
                     )
-                cv2.imwrite(os.path.join(img_out_folder, f"{img_path}_{idx}.jpg"), image_out)
+                cv2.imwrite(os.path.join(img_out_folder, f"{img_path}_{idx}_0.jpg"), image_out)
                 logs.append(["Saved visualization: ", os.path.join(img_out_folder, img_path)])
 
     

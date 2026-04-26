@@ -159,7 +159,10 @@ class Sam3LossWrapper(torch.nn.Module):
         return losses
 
     def forward(self, find_stages: SAM3Output, find_targets):
-        if find_stages.loss_stages is not None:
+        if isinstance(find_stages, tuple):
+            find_stages = find_stages[0] 
+            
+        if hasattr(find_stages, 'loss_stages') and find_stages.loss_stages is not None:
             find_targets = [find_targets[i] for i in find_stages.loss_stages]
         with SAM3Output.iteration_mode(
             find_stages, iter_mode=SAM3Output.IterMode.ALL_STEPS_PER_STAGE

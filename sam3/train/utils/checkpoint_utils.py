@@ -356,3 +356,47 @@ def load_state_dict_into_model(
         ignore_unexpected_keys=ignore_unexpected_keys,
     )
     return model
+
+## EDITED
+class CustomWeightLoader:
+    def __init__(self, filepath):
+        self.filepath = filepath
+
+    def __call__(self, model):
+        import torch
+        import logging
+        from iopath.common.file_io import g_pathmgr
+        
+        logging.info(f"Loading pretrained weights using official detector mapping from {self.filepath}...")
+        
+        with g_pathmgr.open(self.filepath, "rb") as f:
+            ckpt = torch.load(f, map_location="cpu")
+        
+        if "model" in ckpt and isinstance(ckpt["model"], dict):
+            ckpt = ckpt["model"]
+
+        # This is the official developer mapping for the image model
+        sam3_image_ckpt = {
+            k.replace("detector.", ""): v for k, v in ckpt.items() if "detector" in k
+        }
+
+        # Handle interactive predictor if it exists in your model
+        if hasattr(model, 'inst_interactive_predictor') and model.inst_interactive_predictor is not None:
+            sam3_image_ckpt.update(
+                {
+                    k.replace("tracker.", "inst_interactive_predictor.model."): v
+                    for k, v in ckpt.items()
+                    if "tracker" in k
+                }
+            )
+
+        missing_keys, unexpected_keys = model.load_state_dict(sam3_image_ckpt, strict=False)
+        
+        logging.info(f"Loaded weights. Missing keys: {len(missing_keys)}, Unexpected: {len(unexpected_keys)}")
+        
+        # Check if the backbone actually loaded this time
+        backbone_missing = [k for k in missing_keys if "backbone" in k]
+        if backbone_missing:
+            logging.warning(f"Backbone still has {len(backbone_missing)} missing keys. Check if 'detector.' was the right prefix in your specific .pt file.")
+            
+        return model

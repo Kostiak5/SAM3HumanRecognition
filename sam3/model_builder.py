@@ -564,7 +564,8 @@ def build_sam3_image_model(
     enable_segmentation=True,
     enable_inst_interactivity=False,
     compile=False,
-    multimask_output=True
+    multimask_output=True,
+    freeze_backbone=False
 ):
     """
     Build SAM3 image model
@@ -636,7 +637,10 @@ def build_sam3_image_model(
 
     # Setup device and mode
     model = _setup_device_and_mode(model, device, eval_mode)
-
+    if freeze_backbone:
+        print("Freezing the vision and language backbones for fine-tuning...")
+        for name, param in model.backbone.named_parameters():
+            param.requires_grad_(False)
     return model
 
 
