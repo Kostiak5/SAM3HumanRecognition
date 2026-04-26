@@ -7,8 +7,8 @@ defaults:
 # ============================================================================
 paths:
   # roboflow_vl_100_root: /mnt/datagrid/personal/kolomcon/sam2.1/sam2/OCHuman/COCO-like/val2017
-  experiment_log_dir: ../data/SAM3_train_logs
-  bpe_path: /mnt/datagrid/personal/kolomcon/SAM3HumanRecognition/assets/bpe_simple_vocab_16e6.txt.gz # This should be under assets/bpe_simple_vocab_16e6.txt.gz
+  experiment_log_dir: /home/kolomcon/data/SAM3_train_logs
+  bpe_path: /home/kolomcon/sam3/sam3_git/SAM3HumanRecognition/assets/bpe_simple_vocab_16e6.txt.gz # This should be under assets/bpe_simple_vocab_16e6.txt.gz
 
 # Roboflow dataset configuration
 roboflow_train:
@@ -277,8 +277,8 @@ trainer:
         max_val_queries: 50000
         training: true
         use_caching: False
-        img_folder: /mnt/datagrid/personal/kolomcon/sam2.1/sam2/COCO/original/train2017/train2017/
-        ann_file: /mnt/datagrid/personal/kolomcon/sam2.1/sam2/COCO/original/annotations/person_keypoints_train2017.json
+        img_folder: /home/kolomcon/data/COCO/original/train2017/train2017/
+        ann_file: /home/kolomcon/data/COCO/original/annotations/person_keypoints_train2017.json
 
       shuffle: True
       batch_size: ${scratch.train_batch_size}
@@ -297,8 +297,8 @@ trainer:
           include_negatives: true
           category_chunk_size: 2 # Note: You can increase this based on the memory of your GPU.
           _partial_: true
-        img_folder: /mnt/datagrid/personal/kolomcon/sam2.1/sam2/COCO/original/val2017/
-        ann_file: /mnt/datagrid/personal/kolomcon/sam2.1/sam2/COCO/original/annotations/person_keypoints_val2017.json
+        img_folder: /home/kolomcon/data/COCO/original/val2017/
+        ann_file: /home/kolomcon/data/COCO/original/annotations/person_keypoints_val2017.json
         transforms: ${roboflow_train.val_transforms}
         max_ann_per_img: 100000
         multiplier: 1
@@ -333,7 +333,7 @@ trainer:
           maxdets: 100
           pred_file_evaluators:
             - _target_: sam3.eval.coco_eval_offline.CocoEvaluatorOfflineWithPredFileEvaluators
-              gt_path: /mnt/datagrid/personal/kolomcon/sam2.1/sam2/COCO/original/annotations/person_keypoints_val2017.json
+              gt_path: /home/kolomcon/data/COCO/original/annotations/person_keypoints_val2017.json
               tide: False
               iou_type: "bbox"
 
@@ -402,7 +402,7 @@ trainer:
       - "backbone.*"
     model_weight_initializer: 
       _target_: sam3.train.utils.checkpoint_utils.CustomWeightLoader
-      filepath: /mnt/datagrid/personal/kolomcon/data/sam3.pt
+      filepath: /home/kolomcon/data/sam3.pt
 
   logging:
     tensorboard_writer:
