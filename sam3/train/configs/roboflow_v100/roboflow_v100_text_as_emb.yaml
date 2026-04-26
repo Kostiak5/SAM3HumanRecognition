@@ -59,6 +59,10 @@ roboflow_train:
   val_transforms:
     - _target_: sam3.train.transforms.basic_for_api.ComposeAPI
       transforms:
+        # 1. Filter out crowd annotations (these use the dicts that crash the resizer)
+        - _target_: sam3.train.transforms.filter_query_transforms.FlexibleFilterFindGetQueries
+          query_filter:
+            _target_: sam3.train.transforms.filter_query_transforms.FilterCrowds
         - _target_: sam3.train.transforms.segmentation.DecodeRle  # <-- ADD THIS LINE
         - _target_: sam3.train.transforms.basic_for_api.RandomResizeAPI
           sizes: ${scratch.resolution}
@@ -278,7 +282,7 @@ trainer:
         max_val_queries: 50000
         training: true
         use_caching: False
-        img_folder: /home/kolomcon/data/COCO/original/train2017/train2017/
+        img_folder: /home/kolomcon/data/COCO/original/train2017/
         ann_file: /home/kolomcon/data/COCO/original/annotations/person_keypoints_train2017.json
 
       shuffle: True
