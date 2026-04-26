@@ -499,6 +499,10 @@ class Trainer:
         batch = copy_data_to_device(batch, self.device, non_blocking=True)
 
         find_stages = model(batch)
+
+        if isinstance(find_stages, tuple):
+            find_stages = find_stages[0]
+            
         find_targets = [
             unwrap_ddp_if_wrapped(model).back_convert(x) for x in batch.find_targets
         ]
