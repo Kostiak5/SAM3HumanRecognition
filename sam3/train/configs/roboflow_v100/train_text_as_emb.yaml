@@ -254,7 +254,7 @@ trainer:
   max_epochs: 20
   accelerator: cuda
   seed_value: 123
-  val_epoch_freq: 10
+  val_epoch_freq: 1
   mode: train
   gradient_accumulation_steps: ${scratch.gradient_accumulation_steps}
 

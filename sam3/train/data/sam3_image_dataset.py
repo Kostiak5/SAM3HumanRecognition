@@ -401,13 +401,20 @@ class CustomCocoDetectionAPI(VisionDataset):
                 object_id = -1
                 frame_index = -1
 
+            if self.training:
+                final_query_text = "person"
+            else:
+                final_query_text = (
+                    query["query_text"] if query["query_text"] is not None else ""
+                )
             find_queries.append(
                 FindQueryLoaded(
                     # id=query["id"],
                     # query_type=qtype,
-                    query_text=(
-                        query["query_text"] if query["query_text"] is not None else ""
-                    ),
+                    # query_text=(
+                    #     query["query_text"] if query["query_text"] is not None else ""
+                    # ),
+                    query_text=final_query_text,
                     image_id=id2index_img[query["image_id"]],
                     input_bbox=bbox,
                     input_bbox_label=bbox_label,
