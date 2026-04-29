@@ -495,7 +495,6 @@ class Sam3Image(torch.nn.Module):
         if self.training or self.num_interactive_steps_val > 0:
             self._compute_matching(out, self.back_convert(find_target))
         out["encoder_out"] = encoder_out
-        print(out['encoder_out'])
         return out, hs
 
     def _postprocess_out(self, out: Dict, multimask_output: bool = False):
