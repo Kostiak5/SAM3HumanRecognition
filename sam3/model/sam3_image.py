@@ -569,6 +569,7 @@ class Sam3Image(torch.nn.Module):
                     find_target=find_target,
                     previous_out=stage_outs[-1],
                 )
+                print("Geometric prompt: ", geometric_prompt)
             out, hs = self.forward_grounding( ## EDITED
                 backbone_out=backbone_out,
                 find_input=find_input,
