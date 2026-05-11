@@ -276,7 +276,7 @@ trainer:
 
   model:
     # === CRITICAL CHANGE 4: Custom Model Builder ===
-    _target_: custom_builder.build_soft_prompt_sam3
+    _target_: sam3.custom_builder.build_soft_prompt_sam3
     bpe_path: ${paths.bpe_path}
     device: cuda
     num_tokens: 4 
