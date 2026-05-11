@@ -9,13 +9,13 @@ from sam3.model.sam3_image_processor import Sam3Processor
 import pycocotools.mask as mask_util
 from tqdm import tqdm
 from t_test.testing_utils import determine_folders, parse_args, generate_colors, eval_set, visualize, select_keypoints, load_pts, load_ids, load_pts_bboxes
-from t_test.compare_to_gt import mask_to_binary
+from t_test.compare_to_gt import mask_to_binary, GT
 
 import argparse
 import os
 COLORS = generate_colors(50)
 
-def process_img(device, model, processor, img_folder, img_path, img_out_folder, inst_arr, text_prompt="human", args=None):
+def process_img(device, model, processor, img_folder, img_path, img_out_folder, inst_arr, text_prompt="human", args=None, gt_evaluator=None):
     logs = []
 
     # Load an image
@@ -74,6 +74,8 @@ def process_img(device, model, processor, img_folder, img_path, img_out_folder, 
             point_coords=adjusted_coords,
             point_labels=np.ones_like(point_visibility_sorted[:n_kpts]),
             multimask_output=False        )
+        if gt_evaluator is not None:
+            print("IoU of mask :", gt_evaluator.iou_to_gt(inst['id'], this_masks[0]))
         masks.append(this_masks)
         scores.append(this_scores)
         all_point_coords.append(point_coords_sorted[:n_kpts])
@@ -95,7 +97,7 @@ def process_img(device, model, processor, img_folder, img_path, img_out_folder, 
         logs.append(["Saved visualization: ", os.path.join(img_out_folder, img_path)])
     return logs, output
 
-def process_set(set_folder, set_out_folder=None, gt_folder=None, filename_to_id=None, id_to_instance=None, args=None):
+def process_set(set_folder, set_out_folder=None, gt_folder=None, gt_evaluator=None, filename_to_id=None, id_to_instance=None, args=None):
     eval_arr = []
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -123,7 +125,7 @@ def process_set(set_folder, set_out_folder=None, gt_folder=None, filename_to_id=
             else:
                 continue
 
-        _, output = process_img(device, model, processor, set_folder, img_path, set_out_folder, id_to_instance[img_id], args=args)
+        _, output = process_img(device, model, processor, set_folder, img_path, set_out_folder, id_to_instance[img_id], args=args, gt_evaluator=gt_evaluator)
         masks, scores = output
         # print(img_path, len(masks))
         if len(masks) == 0:
@@ -163,5 +165,5 @@ if __name__=="__main__":
     SET_FOLDER, SET_OUT_FOLDER, GT_FOLDER, KPTS_FOLDER = determine_folders(args)
     filename_to_id, id_to_instance = load_ids(KPTS_FOLDER)
     id_to_instance = load_pts_bboxes(KPTS_FOLDER, id_to_instance)
-
-    process_set(SET_FOLDER, SET_OUT_FOLDER, GT_FOLDER, filename_to_id, id_to_instance, args)
+    GT_EVALUATOR = GT(GT_FOLDER)
+    process_set(SET_FOLDER, SET_OUT_FOLDER, GT_FOLDER, GT_EVALUATOR, filename_to_id, id_to_instance, args)
