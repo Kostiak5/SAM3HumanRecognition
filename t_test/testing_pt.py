@@ -76,7 +76,19 @@ def process_img(device, model, processor, img_folder, img_path, img_out_folder, 
             multimask_output=False        )
         if gt_evaluator is not None:
             print("IoU of mask :", gt_evaluator.iou_to_gt(inst['id'], this_masks[0]))
-        masks.append(this_masks)
+        this_masks_np = np.array(this_masks) # Ensure it's a numpy array for slicing
+    
+        # Create an empty array of the original image size, keeping batch/channel dims
+        # this_masks_np is usually shape (1, 1, crop_h, crop_w) or (1, crop_h, crop_w)
+        target_shape = list(this_masks_np.shape)
+        target_shape[-2] = imgh # Replace height
+        target_shape[-1] = imgw # Replace width
+        
+        restored_mask = np.zeros(target_shape, dtype=this_masks_np.dtype)
+        
+        # Paste the predicted mask into the correct location in the full-size array
+        restored_mask[..., ymin:ymax+1, xmin:xmax+1] = this_masks_np
+        masks.append(restored_mask)
         scores.append(this_scores)
         all_point_coords.append(point_coords_sorted[:n_kpts])
 
