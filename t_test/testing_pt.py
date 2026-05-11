@@ -35,60 +35,69 @@ def process_img(device, model, processor, img_folder, img_path, img_out_folder, 
     # print(pose_kpts[:, :2][:n_kpts], pose_kpts[:, 2][:n_kpts])
         pose_kpts = inst['keypoints']
         segm = inst['segmentation']
-        gt_bin_mask = mask_to_binary(segm, imgh, imgw)
-        rows = np.any(gt_bin_mask, axis=1)
-        cols = np.any(gt_bin_mask, axis=0)
-        
-        # Safety check: skip if mask is entirely empty
-        if not np.any(rows) or not np.any(cols):
-            continue
-            
-        ymin, ymax = np.where(rows)[0][[0, -1]]
-        xmin, xmax = np.where(cols)[0][[0, -1]]
-        
-        # Crop the PIL image (right and lower bounds are exclusive in PIL, so +1)
-        cropped_image = image.crop((xmin, ymin, xmax + 1, ymax + 1))
-        
-        # Set the inference state using the newly cropped image
-        inference_state = processor.set_image(cropped_image)
-        # ---------------------------------------------------------
-
         point_coords = pose_kpts[:, :2]
         point_visibility = pose_kpts[:, 2]
-        
+        if point_visibility_sorted is None:
+            continue
         point_coords_sorted, point_visibility_sorted, _ = select_keypoints(
             0.5, point_coords, point_visibility, method="distance+confidence"
         )
-        
-        if point_visibility_sorted is None:
-            continue
-            
-        # ---------------------------------------------------------
-        # 2. SHIFT KEYPOINTS TO MATCH CROPPED COORDINATES
-        # ---------------------------------------------------------
-        # Subtract the bounding box starting point (xmin, ymin) from the coordinates
-        adjusted_coords = point_coords_sorted[:n_kpts] - np.array([[xmin, ymin]])
-        # output_text = processor.set_text_prompt(state=inference_state, prompt=text_prompt)
         this_masks, this_scores, this_logits = model.predict_inst(
             inference_state,
-            point_coords=adjusted_coords,
+            point_coords=point_coords_sorted[:n_kpts],
             point_labels=np.ones_like(point_visibility_sorted[:n_kpts]),
             multimask_output=False        )
+        ## CROP
+        #         gt_bin_mask = mask_to_binary(segm, imgh, imgw)
+        # rows = np.any(gt_bin_mask, axis=1)
+        # cols = np.any(gt_bin_mask, axis=0)
+        
+        # # Safety check: skip if mask is entirely empty
+        # if not np.any(rows) or not np.any(cols):
+        #     continue
+            
+        # ymin, ymax = np.where(rows)[0][[0, -1]]
+        # xmin, xmax = np.where(cols)[0][[0, -1]]
+        
+        # # Crop the PIL image (right and lower bounds are exclusive in PIL, so +1)
+        # cropped_image = image.crop((xmin, ymin, xmax + 1, ymax + 1))
+        
+        # # Set the inference state using the newly cropped image
+        # inference_state = processor.set_image(cropped_image)
+        # # ---------------------------------------------------------
+
+    
+        
+       
+            
+        # # ---------------------------------------------------------
+        # # 2. SHIFT KEYPOINTS TO MATCH CROPPED COORDINATES
+        # # ---------------------------------------------------------
+        # # Subtract the bounding box starting point (xmin, ymin) from the coordinates
+        # adjusted_coords = point_coords_sorted[:n_kpts] - np.array([[xmin, ymin]])
+        # output_text = processor.set_text_prompt(state=inference_state, prompt=text_prompt)
+        # this_masks, this_scores, this_logits = model.predict_inst(
+        #     inference_state,
+        #     point_coords=adjusted_coords,
+        #     point_labels=np.ones_like(point_visibility_sorted[:n_kpts]),
+        #     multimask_output=False        )
        
         this_masks_np = np.array(this_masks) # Ensure it's a numpy array for slicing
     
-        # Create an empty array of the original image size, keeping batch/channel dims
-        # this_masks_np is usually shape (1, 1, crop_h, crop_w) or (1, crop_h, crop_w)
-        target_shape = list(this_masks_np.shape)
-        target_shape[-2] = imgh # Replace height
-        target_shape[-1] = imgw # Replace width
+        # # Create an empty array of the original image size, keeping batch/channel dims
+        # # this_masks_np is usually shape (1, 1, crop_h, crop_w) or (1, crop_h, crop_w)
+        # target_shape = list(this_masks_np.shape)
+        # target_shape[-2] = imgh # Replace height
+        # target_shape[-1] = imgw # Replace width
         
-        restored_mask = np.zeros(target_shape, dtype=this_masks_np.dtype)
+        # restored_mask = np.zeros(target_shape, dtype=this_masks_np.dtype)
         
-        # Paste the predicted mask into the correct location in the full-size array
-        restored_mask[..., ymin:ymax+1, xmin:xmax+1] = this_masks_np
-        if gt_evaluator is not None:
-            print("IoU of mask :", gt_evaluator.iou_to_gt(inst['id'], restored_mask[0]))
+        # # Paste the predicted mask into the correct location in the full-size array
+        # restored_mask[..., ymin:ymax+1, xmin:xmax+1] = this_masks_np
+        ## CROP
+        # if gt_evaluator is not None:
+        #     print("IoU of mask :", gt_evaluator.iou_to_gt(inst['id'], restored_mask[0]))
+
         masks.append(restored_mask)
         scores.append(this_scores)
         all_point_coords.append(point_coords_sorted[:n_kpts])
