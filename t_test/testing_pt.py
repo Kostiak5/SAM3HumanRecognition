@@ -37,11 +37,13 @@ def process_img(device, model, processor, img_folder, img_path, img_out_folder, 
         segm = inst['segmentation']
         point_coords = pose_kpts[:, :2]
         point_visibility = pose_kpts[:, 2]
-        if point_visibility_sorted is None:
-            continue
+        
         point_coords_sorted, point_visibility_sorted, _ = select_keypoints(
             0.5, point_coords, point_visibility, method="distance+confidence"
         )
+        if point_visibility_sorted is None:
+            continue
+        
         this_masks, this_scores, this_logits = model.predict_inst(
             inference_state,
             point_coords=point_coords_sorted[:n_kpts],
@@ -95,7 +97,7 @@ def process_img(device, model, processor, img_folder, img_path, img_out_folder, 
         # # Paste the predicted mask into the correct location in the full-size array
         # restored_mask[..., ymin:ymax+1, xmin:xmax+1] = this_masks_np
         ## CROP end
-        
+
         # if gt_evaluator is not None:
         #     print("IoU of mask :", gt_evaluator.iou_to_gt(inst['id'], restored_mask[0]))
 
