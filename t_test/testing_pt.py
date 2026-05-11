@@ -74,8 +74,7 @@ def process_img(device, model, processor, img_folder, img_path, img_out_folder, 
             point_coords=adjusted_coords,
             point_labels=np.ones_like(point_visibility_sorted[:n_kpts]),
             multimask_output=False        )
-        if gt_evaluator is not None:
-            print("IoU of mask :", gt_evaluator.iou_to_gt(inst['id'], this_masks[0]))
+       
         this_masks_np = np.array(this_masks) # Ensure it's a numpy array for slicing
     
         # Create an empty array of the original image size, keeping batch/channel dims
@@ -88,6 +87,8 @@ def process_img(device, model, processor, img_folder, img_path, img_out_folder, 
         
         # Paste the predicted mask into the correct location in the full-size array
         restored_mask[..., ymin:ymax+1, xmin:xmax+1] = this_masks_np
+        if gt_evaluator is not None:
+            print("IoU of mask :", gt_evaluator.iou_to_gt(inst['id'], restored_mask[0]))
         masks.append(restored_mask)
         scores.append(this_scores)
         all_point_coords.append(point_coords_sorted[:n_kpts])
