@@ -206,12 +206,12 @@ def determine_folders(args):
     if args.dataset == "COCO":
         set_folder = os.path.join(base,"COCO/original/val2017")
         gt_folder = os.path.join(base,"COCO/original/annotations/person_keypoints_val2017.json")
-        kpts_folder = os.path.join(base,"COCO/original/annotations/PMPose_COCO_val2017_full_keypoints.json")
+        kpts_folder = os.path.join(base,"COCO/orbbiginal/annotations/PMPose_COCO_val2017_full_keypoints.json")
 
     elif args.dataset == "OCHUMAN":
         set_folder = os.path.join(base,"OCHuman/COCO-like/val2017")
         gt_folder = os.path.join(base,"OCHuman/COCO-like/annotations/ochuman_coco_onlytest.json")
-        kpts_folder = os.path.join(base,"OCHuman/COCO-like/annotations/PMPose-b_OCH_test_pGT.json")
+        kpts_folder = os.path.join(base,"OCHuman/COCO-like/annotations/ochuman_coco_onlytest.json") # os.path.join(base,"OCHuman/COCO-like/annotations/PMPose-b_OCH_test_pGT.json")
 
     elif args.dataset == "OCHUMANVAL":
         set_folder = os.path.join(base,"OCHuman/COCO-like/val2017")
@@ -483,6 +483,7 @@ def load_pts_bboxes(gt_folder, id_to_instance, bbox=False):
             id_to_instance[anno['image_id']].append({
                 'keypoints': kpts,
                 'bbox': anno['bbox'],
+                'segmentaton': anno['segmentation']
                 })
             if 'id' in anno:
                 id_to_instance[anno['image_id']][-1]['id'] = anno['id']
