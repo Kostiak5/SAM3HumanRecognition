@@ -483,7 +483,7 @@ def load_pts_bboxes(gt_folder, id_to_instance, bbox=False):
             id_to_instance[anno['image_id']].append({
                 'keypoints': kpts,
                 'bbox': anno['bbox'],
-                'segmentaton': anno['segmentation']
+                'segmentatixon': anno['segmentation']
                 })
             if 'id' in anno:
                 id_to_instance[anno['image_id']][-1]['id'] = anno['id']
