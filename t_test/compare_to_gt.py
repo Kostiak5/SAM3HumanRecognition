@@ -18,6 +18,34 @@ def mask_to_rle(gt_mask, height, width):
         else:
             # It's already a compressed RLE (bytes/string)
             return gt_mask
+        
+def mask_to_binary(mask, height, width):
+    """
+    Converts any COCO segmentation format into a 2D binary numpy array.
+    """
+    # 0. Check if it's already a numpy array (binary mask)
+    if isinstance(mask, np.ndarray):
+        return mask
+
+    # 1. Check if it's a Polygon (list of lists of floats)
+    if isinstance(mask, list):
+        rles = mask_utils.frPyObjects(mask, height, width)
+        compressed_rle = mask_utils.merge(rles)
+        return mask_utils.decode(compressed_rle)
+
+    # 2. Check if it's an RLE (Dictionary)
+    elif isinstance(mask, dict):
+        if isinstance(mask['counts'], list):
+            # Uncompressed RLE (integer list)
+            compressed_rle = mask_utils.frPyObjects(mask, height, width)
+            return mask_utils.decode(compressed_rle)
+        else:
+            # Compressed RLE (bytes/string)
+            return mask_utils.decode(mask)
+            
+    else:
+        raise ValueError(f"Unknown mask format: {type(mask)}")
+    
 class GT:
     def __init__(self, gt_path):
         self.gt_path = gt_path

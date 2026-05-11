@@ -8,18 +8,20 @@ from sam3.model_builder import build_sam3_image_model
 from sam3.model.sam3_image_processor import Sam3Processor
 import pycocotools.mask as mask_util
 from tqdm import tqdm
-from t_test.testing_utils import determine_folders, parse_args, generate_colors, eval_set, visualize, select_keypoints, load_pts, load_ids
+from t_test.testing_utils import determine_folders, parse_args, generate_colors, eval_set, visualize, select_keypoints, load_pts, load_ids, load_pts_bboxes
+from t_test.compare_to_gt import mask_to_binary
 
 import argparse
 import os
 COLORS = generate_colors(50)
 
-def process_img(device, model, processor, img_folder, img_path, img_out_folder, pose_kpts_arr, text_prompt="human", args=None):
+def process_img(device, model, processor, img_folder, img_path, img_out_folder, inst_arr, text_prompt="human", args=None):
     logs = []
 
     # Load an image
     logs.append("Start processing")
     image = Image.open(os.path.join(img_folder, img_path))
+    imgw, imgh = image.size
     inference_state = processor.set_image(image)
     # inference_state = processor.set_text_prompt(state=inference_state, prompt="potato")
     # Prompt the model with text
@@ -29,20 +31,49 @@ def process_img(device, model, processor, img_folder, img_path, img_out_folder, 
     masks = []
     scores = []
     all_point_coords = []
-    for pose_kpts in pose_kpts_arr:
+    for inst in inst_arr:
     # print(pose_kpts[:, :2][:n_kpts], pose_kpts[:, 2][:n_kpts])
+        pose_kpts = inst['keypoints']
+        segm = inst['segmentation']
+        gt_bin_mask = mask_to_binary(segm, imgh, imgw)
+        rows = np.any(gt_bin_mask, axis=1)
+        cols = np.any(gt_bin_mask, axis=0)
+        
+        # Safety check: skip if mask is entirely empty
+        if not np.any(rows) or not np.any(cols):
+            continue
+            
+        ymin, ymax = np.where(rows)[0][[0, -1]]
+        xmin, xmax = np.where(cols)[0][[0, -1]]
+        
+        # Crop the PIL image (right and lower bounds are exclusive in PIL, so +1)
+        cropped_image = image.crop((xmin, ymin, xmax + 1, ymax + 1))
+        
+        # Set the inference state using the newly cropped image
+        inference_state = processor.set_image(cropped_image)
+        # ---------------------------------------------------------
+
         point_coords = pose_kpts[:, :2]
         point_visibility = pose_kpts[:, 2]
-        point_coords_sorted, point_visibility_sorted, _ = select_keypoints(0.5, point_coords, point_visibility, method="distance+confidence")
+        
+        point_coords_sorted, point_visibility_sorted, _ = select_keypoints(
+            0.5, point_coords, point_visibility, method="distance+confidence"
+        )
+        
         if point_visibility_sorted is None:
             continue
+            
+        # ---------------------------------------------------------
+        # 2. SHIFT KEYPOINTS TO MATCH CROPPED COORDINATES
+        # ---------------------------------------------------------
+        # Subtract the bounding box starting point (xmin, ymin) from the coordinates
+        adjusted_coords = point_coords_sorted[:n_kpts] - np.array([[xmin, ymin]])
         # output_text = processor.set_text_prompt(state=inference_state, prompt=text_prompt)
         this_masks, this_scores, this_logits = model.predict_inst(
             inference_state,
-            point_coords=point_coords_sorted[:n_kpts],
+            point_coords=adjusted_coords,
             point_labels=np.ones_like(point_visibility_sorted[:n_kpts]),
             multimask_output=False        )
-        print(this_logits.shape)
         masks.append(this_masks)
         scores.append(this_scores)
         all_point_coords.append(point_coords_sorted[:n_kpts])
@@ -64,7 +95,7 @@ def process_img(device, model, processor, img_folder, img_path, img_out_folder, 
         logs.append(["Saved visualization: ", os.path.join(img_out_folder, img_path)])
     return logs, output
 
-def process_set(set_folder, set_out_folder=None, gt_folder=None, filename_to_id=None, id_to_kpts=None, args=None):
+def process_set(set_folder, set_out_folder=None, gt_folder=None, filename_to_id=None, id_to_instance=None, args=None):
     eval_arr = []
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -92,7 +123,7 @@ def process_set(set_folder, set_out_folder=None, gt_folder=None, filename_to_id=
             else:
                 continue
 
-        _, output = process_img(device, model, processor, set_folder, img_path, set_out_folder, id_to_kpts[img_id], args=args)
+        _, output = process_img(device, model, processor, set_folder, img_path, set_out_folder, id_to_instance[img_id], args=args)
         masks, scores = output
         # print(img_path, len(masks))
         if len(masks) == 0:
@@ -130,7 +161,7 @@ if __name__=="__main__":
     IMG_OUT_FOLDER = "t_test/test_images_out"
     args = parse_args()
     SET_FOLDER, SET_OUT_FOLDER, GT_FOLDER, KPTS_FOLDER = determine_folders(args)
-    filename_to_id, id_to_kpts = load_ids(KPTS_FOLDER)
-    id_to_kpts = load_pts(KPTS_FOLDER, id_to_kpts)
+    filename_to_id, id_to_instance = load_ids(KPTS_FOLDER)
+    id_to_instance = load_pts_bboxes(KPTS_FOLDER, id_to_instance)
 
-    process_set(SET_FOLDER, SET_OUT_FOLDER, GT_FOLDER, filename_to_id, id_to_kpts, args)
+    process_set(SET_FOLDER, SET_OUT_FOLDER, GT_FOLDER, filename_to_id, id_to_instance, args)
