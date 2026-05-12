@@ -324,7 +324,7 @@ trainer:
 
   checkpoint:
     save_dir: ${launcher.experiment_log_dir}/checkpoints
-    save_freq: 0  
+    save_freq: 2
     # === CRITICAL CHANGE 5: Checkpointing & Loading ===
     skip_saving_parameters:
       - "sam3.*" 
