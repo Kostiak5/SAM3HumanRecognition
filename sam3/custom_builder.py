@@ -59,6 +59,9 @@ class SAM3PromptTuningWrapper(nn.Module):
         previous_stages_out.append([out])
         
         return previous_stages_out, hs
+    
+    def back_convert(self, targets):
+        return self.sam3.back_convert(targets)
 
 
 def build_soft_prompt_sam3(**kwargs):
