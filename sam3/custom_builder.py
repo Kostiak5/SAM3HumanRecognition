@@ -3,6 +3,9 @@ import torch.nn as nn
 from sam3.model_builder import build_sam3_image_model
 from sam3.model.model_misc import SAM3Output
 
+# === ADD THIS IMPORT ===
+from sam3.model.geometry_encoders import Prompt
+
 class SAM3PromptTuningWrapper(nn.Module):
     def __init__(self, base_sam3_model, num_tokens=4):
         super().__init__()
@@ -13,20 +16,20 @@ class SAM3PromptTuningWrapper(nn.Module):
             param.requires_grad = False
             
         # 2. Define the learnable soft prompt
-        # Based on encoder.py, the prompt must be (seq_len, batch_size, d_model)
-        # We set batch_size=1 here, and dynamically expand it during forward()
-        seq_len = num_tokens
-        embed_dim = 256 # Standard SAM3 d_model
-        self.soft_prompt = nn.Parameter(torch.randn(seq_len, 1, embed_dim))
+        embed_dim = 256 
+        self.soft_prompt = nn.Parameter(torch.randn(num_tokens, 1, embed_dim))
 
     def forward(self, input_batch):
+        """Intercepts the forward pass from trainer.py"""
         device = self.soft_prompt.device
         batch_size = len(input_batch.img_batch)
         seq_len = self.soft_prompt.shape[0]
         
+        # Process image features normally
         backbone_out = {"img_batch_all_stages": input_batch.img_batch}
         backbone_out.update(self.sam3.backbone.forward_image(input_batch.img_batch))
         
+        # INJECT SOFT PROMPT
         prompt_expanded = self.soft_prompt.expand(-1, batch_size, -1)
         backbone_out["language_features"] = prompt_expanded
         
@@ -37,19 +40,26 @@ class SAM3PromptTuningWrapper(nn.Module):
         
         find_input = input_batch.find_inputs[0]
         
-        # === THE FIX ===
-        # Do not create a dummy prompt! Let SAM3 extract the natively 
-        # batched (but empty) geometry directly from find_input.
+        # Extract the native, correctly batched geometric prompt from the dataset
+        geometric_prompt = Prompt(
+            box_embeddings=find_input.input_boxes,
+            box_mask=find_input.input_boxes_mask,
+            box_labels=find_input.input_boxes_label,
+        )
+        
+        # Run standard SAM3 grounding, passing the geometric_prompt correctly
         out, hs = self.sam3.forward_grounding(
             backbone_out=backbone_out,
             find_input=find_input,
-            find_target=None
+            find_target=None,
+            geometric_prompt=geometric_prompt
         )
         
         previous_stages_out = SAM3Output(iter_mode=SAM3Output.IterMode.LAST_STEP_PER_STAGE)
         previous_stages_out.append([out])
         
         return previous_stages_out, hs
+
 
 def build_soft_prompt_sam3(**kwargs):
     """Hydra calls this. We let model_builder.py handle the heavy lifting."""
