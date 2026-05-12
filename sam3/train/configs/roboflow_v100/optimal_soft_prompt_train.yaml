@@ -238,8 +238,8 @@ trainer:
         use_caching: False
         
         # === CRITICAL CHANGE 3: Fixed Dataloader Paths ===
-        img_folder: /home/kolomcon/data/Roboflow/${roboflow_train.supercategory}/train/
-        ann_file: /home/kolomcon/data/Roboflow/${roboflow_train.supercategory}/train/_annotations.coco.json
+        img_folder: /home/kolomcon/data/COCO/original/train2017/
+        ann_file: /home/kolomcon/data/COCO/original/annotations/person_keypoints_train2017.json
 
       shuffle: True
       batch_size: ${scratch.train_batch_size}
@@ -260,8 +260,8 @@ trainer:
           _partial_: true
         
         # Fixed Dataloader Paths for validation
-        img_folder: /home/kolomcon/data/Roboflow/${roboflow_train.supercategory}/valid/
-        ann_file: /home/kolomcon/data/Roboflow/${roboflow_train.supercategory}/valid/_annotations.coco.json
+        img_folder: /home/kolomcon/data/COCO/original/val2017/
+        ann_file: /home/kolomcon/data/COCO/original/annotations/person_keypoints_val2017.json
         transforms: ${roboflow_train.val_transforms}
         max_ann_per_img: 100000
         multiplier: 1
@@ -294,7 +294,7 @@ trainer:
           maxdets: 100
           pred_file_evaluators:
             - _target_: sam3.eval.coco_eval_offline.CocoEvaluatorOfflineWithPredFileEvaluators
-              gt_path: /home/kolomcon/data/Roboflow/${roboflow_train.supercategory}/valid/_annotations.coco.json
+              gt_path: /home/kolomcon/data/COCO/original/annotations/person_keypoints_val2017.json
               tide: False
               iou_type: "bbox"
 
