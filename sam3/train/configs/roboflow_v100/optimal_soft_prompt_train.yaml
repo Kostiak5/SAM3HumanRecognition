@@ -21,9 +21,6 @@ roboflow_train:
         - _target_: sam3.train.transforms.filter_query_transforms.FlexibleFilterFindGetQueries
           query_filter:
             _target_: sam3.train.transforms.filter_query_transforms.FilterCrowds
-        - _target_: sam3.train.transforms.point_sampling.RandomizeInputBbox
-          box_noise_std: 0.1
-          box_noise_max: 20
         - _target_: sam3.train.transforms.segmentation.DecodeRle
         - _target_: sam3.train.transforms.basic_for_api.RandomResizeAPI
           sizes:
@@ -286,7 +283,7 @@ trainer:
       roboflow100:
         detection:
           _target_: sam3.eval.coco_writer.PredictionDumper
-          iou_type: "bbox"
+          iou_type: "segm"
           dump_dir: ${launcher.experiment_log_dir}/dumps/roboflow/${roboflow_train.supercategory}
           merge_predictions: True
           postprocessor: ${scratch.original_box_postprocessor}
@@ -296,7 +293,7 @@ trainer:
             - _target_: sam3.eval.coco_eval_offline.CocoEvaluatorOfflineWithPredFileEvaluators
               gt_path: /home/kolomcon/data/COCO/original/annotations/person_keypoints_val2017.json
               tide: False
-              iou_type: "bbox"
+              iou_type: "segm"
 
   optim:
     amp:
