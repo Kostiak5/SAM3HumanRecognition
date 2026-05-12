@@ -68,7 +68,7 @@ def build_soft_prompt_sam3(**kwargs):
     kwargs["checkpoint_path"] = "/home/kolomcon/data/sam3.pt"
     kwargs["load_from_HF"] = False
     kwargs["freeze_backbone"] = False 
-    
+    kwargs["eval_mode"] = False
     base_model = build_sam3_image_model(**kwargs)
     wrapped_model = SAM3PromptTuningWrapper(base_model, num_tokens=num_tokens)
     
