@@ -39,7 +39,7 @@ class SAM3PromptTuningWrapper(nn.Module):
         backbone_out["language_embeds"] = prompt_expanded
         
         find_input = input_batch.find_inputs[0]
-        
+        find_target = input_batch.find_targets[0]
         # Extract the native, correctly batched geometric prompt from the dataset
         geometric_prompt = Prompt(
             box_embeddings=find_input.input_boxes,
@@ -51,7 +51,7 @@ class SAM3PromptTuningWrapper(nn.Module):
         out, hs = self.sam3.forward_grounding(
             backbone_out=backbone_out,
             find_input=find_input,
-            find_target=None,
+            find_target=find_target,
             geometric_prompt=geometric_prompt
         )
         
