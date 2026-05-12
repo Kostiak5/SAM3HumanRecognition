@@ -139,6 +139,8 @@ scratch:
     max_dets_per_img: -1
     use_original_ids: true
     use_original_sizes_box: true
+    use_original_sizes_mask: true 
+    iou_type: "segm"
     use_presence: ${scratch.use_presence_eval}
 
   matcher:
