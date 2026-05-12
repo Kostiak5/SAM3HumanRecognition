@@ -169,9 +169,7 @@ scratch:
   context_length: 2
   gather_pred_via_filesys: false
 
-  # === CRITICAL CHANGE 1: Simplified Learning Rate ===
-  # We only need one learning rate now, for the soft prompt!
-  lr_soft_prompt: 0.01
+  lr_soft_prompt: 0.02
   wd: 0.1
   scheduler_timescale: 20
   scheduler_warmup: 2
@@ -186,7 +184,7 @@ scratch:
     with_seg_masks: ${scratch.enable_segmentation}
 
   gradient_accumulation_steps: 1
-  train_batch_size: 1
+  train_batch_size: 2
   collate_fn:
     _target_: sam3.train.data.collator.collate_fn_api
     _partial_: true

@@ -233,7 +233,7 @@ scratch:
     with_seg_masks: ${scratch.enable_segmentation} # Note: Set this to true if using segmentation masks!
 
   gradient_accumulation_steps: 1
-  train_batch_size: 1
+  train_batch_size: 4
   collate_fn:
     _target_: sam3.train.data.collator.collate_fn_api
     _partial_: true
