@@ -25,28 +25,27 @@ def load_trained_model(checkpoint_path):
     clean_state_dict = {k.replace("module.", ""): v for k, v in state_dict.items()}
     model.load_state_dict(clean_state_dict, strict=False)
     
-    # === THE MAGIC TRICK: Monkey Patch forward_text ===
-    # We override the base text processor to ignore incoming strings and 
-    # inject your trained soft_prompt directly into Sam3Processor!
     def override_forward_text(captions, input_boxes=None, additional_text=None, device="cuda"):
-        # Process our trained soft prompt tensor
-        text_features = model.sam3.backbone.text_encoder.transformer(model.soft_prompt)
-        
-        # Match the batch size expected by the processor
+        # Match the batch size expected by the processor (usually 1 during inference)
         batch_size = len(captions)
-        text_features_expanded = text_features.expand(batch_size, -1, -1)
-        seq_len = text_features_expanded.shape[1]
         
-        # Create valid mask
+        # In custom_builder.py, your soft prompt shape was initialized as (num_tokens, 1, embed_dim)
+        # We just expand it to match the batch size: -> (num_tokens, batch_size, embed_dim)
+        prompt_expanded = model.soft_prompt.expand(-1, batch_size, -1)
+        
+        # The sequence length is the number of tokens (4)
+        seq_len = prompt_expanded.shape[0] 
+        
+        # Create a valid mask of False (meaning all tokens are valid and not padded)
         language_mask = torch.zeros((batch_size, seq_len), dtype=torch.bool, device=device)
         
+        # Return exactly what SAM3 expects, completely bypassing the language model!
         return {
-            "language_features": text_features_expanded,
+            "language_features": prompt_expanded,
             "language_mask": language_mask,
-            "language_embeds": text_features_expanded
+            "language_embeds": prompt_expanded
         }
         
-    # Apply the patch to the base model's backbone!
     model.sam3.backbone.forward_text = override_forward_text
     print("3. Learned tokens successfully injected into Sam3Processor pipeline!")
     
