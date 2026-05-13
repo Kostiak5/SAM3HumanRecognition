@@ -145,7 +145,7 @@ def process_set(set_folder, set_out_folder=None, gt_folder=None, filename_to_id=
 
 if __name__=="__main__":
     # Point this to your best checkpoint
-    CKPT_PATH = "/home/kolomcon/data/SAM3_train_logs/checkpoints/checkpoint.pt" 
+    CKPT_PATH = "/home/kolomcon/data/SAM3_train_logs/checkpoints/checkpoint_2.pt" 
     
     args = parse_args()
     SET_FOLDER, SET_OUT_FOLDER, GT_FOLDER, KPTS_FOLDER = determine_folders(args)
