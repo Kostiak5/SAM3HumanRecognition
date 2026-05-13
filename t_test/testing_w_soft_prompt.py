@@ -1,108 +1,100 @@
 import torch
+import os
 import cv2
 import numpy as np
 import json
-import os
 from PIL import Image
-from sam3.model.sam3_image_processor import Sam3Processor
 import pycocotools.mask as mask_util
 from tqdm import tqdm
-# Import your custom builder
+
 from sam3.custom_builder import build_soft_prompt_sam3
-from sam3.train.transforms.basic_for_api import ComposeAPI
-from sam3.train.transforms.segmentation import ResizeLongestSide, NormalizeImage, ToTensor
+from sam3.model.sam3_image_processor import Sam3Processor
 from t_test.testing_utils import determine_folders, parse_args, generate_colors, eval_set, visualize, select_keypoints, load_pts, load_ids
+
+COLORS = generate_colors(50)
 
 def load_trained_model(checkpoint_path):
     print("1. Building SAM3 + Soft Prompt Wrapper...")
-    # Make sure eval_mode=True to disable the matcher and dropout layers!
     model = build_soft_prompt_sam3(num_tokens=4, eval_mode=True)
     model.eval()
     model.cuda()
 
     print(f"2. Loading weights from: {checkpoint_path}")
     checkpoint = torch.load(checkpoint_path, map_location="cuda")
-    
-    # 3. Clean the DDP "module." prefixes if they exist
-    state_dict = checkpoint.get("model", checkpoint) # Fallback just in case
+    state_dict = checkpoint.get("model", checkpoint) 
     clean_state_dict = {k.replace("module.", ""): v for k, v in state_dict.items()}
-
-    # 4. Inject the learned embeddings! 
-    # strict=False allows it to load the soft_prompt even if the base SAM3 
-    # weights aren't perfectly mapped in the checkpoint dictionary.
     model.load_state_dict(clean_state_dict, strict=False)
     
-    print("3. Learned tokens successfully injected!")
+    # === THE MAGIC TRICK: Monkey Patch forward_text ===
+    # We override the base text processor to ignore incoming strings and 
+    # inject your trained soft_prompt directly into Sam3Processor!
+    def override_forward_text(captions, input_boxes=None, additional_text=None, device="cuda"):
+        # Process our trained soft prompt tensor
+        text_features = model.sam3.backbone.text_encoder.transformer(model.soft_prompt)
+        
+        # Match the batch size expected by the processor
+        batch_size = len(captions)
+        text_features_expanded = text_features.expand(batch_size, -1, -1)
+        seq_len = text_features_expanded.shape[1]
+        
+        # Create valid mask
+        language_mask = torch.zeros((batch_size, seq_len), dtype=torch.bool, device=device)
+        
+        return {
+            "language_features": text_features_expanded,
+            "language_mask": language_mask,
+            "language_embeds": text_features_expanded
+        }
+        
+    # Apply the patch to the base model's backbone!
+    model.sam3.backbone.forward_text = override_forward_text
+    print("3. Learned tokens successfully injected into Sam3Processor pipeline!")
+    
     return model
 
-def process_img(model, image_path):
-    # 1. Load the image
-    image_bgr = cv2.imread(image_path)
-    orig_h, orig_w = image_bgr.shape[:2]
-    image_rgb = cv2.cvtColor(image_bgr, cv2.COLOR_BGR2RGB)
-    
-    # 2. Format the image exactly how SAM3 expects it
-    # (Adjust these transforms to match your YAML's val_transforms)
-    transform = ComposeAPI([
-        ResizeLongestSide(target_length=1024),
-        ToTensor(),
-        NormalizeImage(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-    ])
-    
-    # Apply transforms
-    input_dict = {"image": image_rgb}
-    input_dict = transform(input_dict)
-    
-    # Move to GPU and add batch dimension (Batch Size = 1)
-    img_tensor = input_dict["image"].unsqueeze(0).cuda()
-    
-    # 3. Create the dummy BatchedDatapoint (Mocking the dataloader)
-    class DummyFindInput:
-        def __init__(self):
-            # Empty geometry! (This forces the model to use your soft prompt)
-            self.input_boxes = torch.zeros((1, 0, 4), device="cuda")
-            self.input_boxes_mask = torch.zeros((1, 0), dtype=torch.bool, device="cuda")
-            self.input_boxes_label = torch.zeros((1, 0), dtype=torch.long, device="cuda")
-            
-    class DummyBatch:
-        def __init__(self, img):
-            self.img_batch = img
-            self.find_inputs = [DummyFindInput()]
-            self.find_targets = [None] # No ground truth during inference!
+def process_img(device, wrapped_model, processor, img_folder, img_path, img_out_folder, pose_kpts_arr, args=None):
+    logs = []
 
-    batch = DummyBatch(img_tensor)
+    logs.append("Start processing")
+    image = Image.open(os.path.join(img_folder, img_path))
+    inference_state = processor.set_image(image)
     
-    print(f"4. Running inference on {image_path}...")
-    with torch.no_grad():
-        out, _ = model(batch)
-        
-    # 5. Extract the predictions
-    final_stage_out = out[-1][0] 
-    raw_masks = final_stage_out["pred_masks"] # Shape: (1, N, H, W)
-    raw_scores = final_stage_out["pred_logits"] # Shape: (1, N, 1)
-    
-    # 6. Resize masks back to original image dimensions
-    masks_resized = torch.nn.functional.interpolate(
-        raw_masks,
-        size=(orig_h, orig_w),
-        mode="bilinear",
-        align_corners=False
-    )
-    
-    # 7. Apply Sigmoid, Threshold, and DROP the Batch Dimension [0]
-    masks = (masks_resized.sigmoid() > 0.5).cpu().numpy()[0] # Shape is now (N, orig_H, orig_W)
-    scores = raw_scores.sigmoid().cpu().numpy()[0]           # Shape is now (N, 1)
-    
-    return scores, masks
+    # Because we monkey-patched forward_text, it doesn't matter what string we pass here!
+    # It will automatically bypass the text and use your learned soft prompt.
+    inference_state = processor.set_text_prompt(state=inference_state, prompt="trigger_soft_prompt")
+    logs.append("Image and Soft Prompt set")
 
-def process_set(set_folder, set_out_folder=None, gt_folder=None, filename_to_id=None, id_to_kpts=None, args=None):
+    masks = inference_state["masks"].detach().cpu().numpy()
+    scores = inference_state["scores"].detach().cpu().to(torch.float32).numpy()
+    
+    logs.append([scores])
+    output = [masks, scores]
+    
+    if args is not None and args.vis:
+        for i in range(masks.shape[0]):
+            image_out = visualize(
+                os.path.join(img_folder, img_path),
+                COLORS,
+                masks=masks,
+                scores=scores
+            )
+            cv2.imwrite(os.path.join(img_out_folder, img_path), image_out)
+        logs.append(["Saved visualization: ", os.path.join(img_out_folder, img_path)])
+    return logs, output
+
+def process_set(set_folder, set_out_folder=None, gt_folder=None, filename_to_id=None, id_to_kpts=None, args=None, ckpt_path=None):
     eval_arr = []
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Loading model on: {device.type.upper()}")
     
-    model = load_trained_model(CKPT_PATH)
-
+    # 1. Load the wrapped model
+    wrapped_model = load_trained_model(ckpt_path)
+    
+    # 2. Pass the BASE model to Sam3Processor!
+    # By passing wrapped_model.sam3, the processor gets the expected API, 
+    # but still benefits from our monkey-patched forward_text logic.
+    processor = Sam3Processor(wrapped_model.sam3)
 
     i = 0
     for img_path in tqdm(os.listdir(set_folder)):
@@ -120,9 +112,10 @@ def process_set(set_folder, set_out_folder=None, gt_folder=None, filename_to_id=
                 img_id = filename_to_id[img_path]
             else:
                 continue
+
+        _, output = process_img(device, wrapped_model, processor, set_folder, img_path, set_out_folder, id_to_kpts[img_id], args=args)
+        masks, scores = output
         
-        full_img_path = os.path.join(set_folder, img_path)
-        scores, masks = process_img(model, full_img_path)
         if len(masks) == 0:
             continue
 
@@ -131,7 +124,7 @@ def process_set(set_folder, set_out_folder=None, gt_folder=None, filename_to_id=
             if mask_np.ndim == 3:
                 mask_np = mask_np[0] # Take the first (and only) channel
             
-            # 2. Encode with the correct 2D shape
+            # Encode with the correct 2D shape
             rle = mask_util.encode(np.asfortranarray(mask_np))
             rle['counts'] = rle['counts'].decode('utf-8')
             eval_arr.append({
@@ -140,9 +133,9 @@ def process_set(set_folder, set_out_folder=None, gt_folder=None, filename_to_id=
                 "image_id": int(img_id),
                 "category_id": 1
             })
-
-    if SET_OUT_FOLDER is not None:
-        output_json_path = os.path.join(SET_OUT_FOLDER, f"output.json")
+    
+    if set_out_folder is not None:
+        output_json_path = os.path.join(set_out_folder, f"output.json")
 
         with open(output_json_path, 'w') as f:
             json.dump(eval_arr, f)
@@ -151,14 +144,13 @@ def process_set(set_folder, set_out_folder=None, gt_folder=None, filename_to_id=
         
     eval_set(eval_arr, gt_folder)
 
-if __name__ == "__main__":
-    # Point this to your best checkpoint (e.g., from Epoch 18 or 20)
-    CKPT_PATH = "/home/kolomcon/data/SAM3_train_logs/checkpoints/checkpoint.pt"
-    TEST_IMAGE = "/path/to/a/test/image.jpg"
-     
+if __name__=="__main__":
+    # Point this to your best checkpoint
+    CKPT_PATH = "/home/kolomcon/data/SAM3_train_logs/checkpoints/checkpoint.pt" 
+    
     args = parse_args()
     SET_FOLDER, SET_OUT_FOLDER, GT_FOLDER, KPTS_FOLDER = determine_folders(args)
     filename_to_id, id_to_kpts = load_ids(KPTS_FOLDER)
     id_to_kpts = load_pts(KPTS_FOLDER, id_to_kpts)
 
-    process_set(SET_FOLDER, SET_OUT_FOLDER, GT_FOLDER, filename_to_id, id_to_kpts, args)    
+    process_set(SET_FOLDER, SET_OUT_FOLDER, GT_FOLDER, filename_to_id, id_to_kpts, args, ckpt_path=CKPT_PATH)
