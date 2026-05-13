@@ -171,10 +171,10 @@ scratch:
   context_length: 2
   gather_pred_via_filesys: false
 
-  lr_soft_prompt: 0.005
+  lr_soft_prompt: 0.02
   wd: 0.1
   scheduler_timescale: 20
-  scheduler_warmup: 2000
+  scheduler_warmup: 2
   scheduler_cooldown: 5
 
   val_batch_size: 1
@@ -185,7 +185,7 @@ scratch:
     dict_key: roboflow100
     with_seg_masks: ${scratch.enable_segmentation}
 
-  gradient_accumulation_steps: 4
+  gradient_accumulation_steps: 1
   train_batch_size: 2
   collate_fn:
     _target_: sam3.train.data.collator.collate_fn_api
