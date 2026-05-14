@@ -276,7 +276,7 @@ trainer:
     _target_: sam3.custom_builder.build_soft_prompt_sam3
     bpe_path: ${paths.bpe_path}
     device: cuda
-    num_tokens: 16
+    num_tokens: 4 
    
   meters:
     val:
