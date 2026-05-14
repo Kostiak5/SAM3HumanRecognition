@@ -6,7 +6,7 @@ defaults:
 # Paths Configuration
 # ============================================================================
 paths:
-  experiment_log_dir: /home/kolomcon/data/SAM3_train2_logs 
+  experiment_log_dir: /home/kolomcon/data/SAM3_train3_logs 
   bpe_path: /home/kolomcon/sam3/sam3_git/SAM3HumanRecognition/assets/bpe_simple_vocab_16e6.txt.gz
 
 # Roboflow dataset configuration
